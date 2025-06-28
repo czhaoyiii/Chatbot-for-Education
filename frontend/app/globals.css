@@ -120,3 +120,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: rgba(30, 33, 37);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(163, 163, 163); /* slate-500/50 */
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(136, 137, 137); /* darker on hover */
+}
