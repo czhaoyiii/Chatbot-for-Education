@@ -10,6 +10,7 @@ import {
   BookOpen,
   Clock,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -22,9 +23,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <MessageSquare className="w-4 h-4 text-white" />
-              </div>
+              <Image
+                src="/logo.png"
+                alt="EduChat Logo"
+                width={32}
+                height={32}
+                className="rounded-full"
+              />
               <span className="text-xl font-bold text-gray-900 dark:text-white">
                 EduChat
               </span>
@@ -42,7 +47,7 @@ export default function HomePage() {
                   <Moon className="w-4 h-4" />
                 )}
               </Button>
-              <Link href="/login">
+              <Link href="/chat">
                 <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
                   Sign In
                 </Button>
@@ -56,9 +61,13 @@ export default function HomePage() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="mb-8">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl">
-              <MessageSquare className="w-10 h-10 text-white" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="EduChat Logo"
+              width={88}
+              height={88}
+              className="mx-auto mb-4 shadow-2xl rounded-full"
+            />
           </div>
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-none">
             Your AI-Powered
@@ -73,7 +82,7 @@ export default function HomePage() {
             your professors and tutors aren't available.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/login">
+            <Link href="/chat">
               <Button
                 size="lg"
                 className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-4 text-lg"
@@ -208,7 +217,7 @@ export default function HomePage() {
             with their AI study companion. Your course materials are waiting for
             you.
           </p>
-          <Link href="/login">
+          <Link href="/chat">
             <Button
               size="lg"
               className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-12 py-4 text-lg"
@@ -225,9 +234,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <MessageSquare className="w-3 h-3 text-white" />
-              </div>
+              <Image
+                src="/logo.png"
+                alt="EduChat Logo"
+                width={24}
+                height={24}
+                className="rounded-full"
+              />
               <span className="text-lg font-semibold text-gray-900 dark:text-white">
                 EduChat
               </span>
