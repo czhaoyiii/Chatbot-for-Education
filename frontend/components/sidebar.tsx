@@ -1,44 +1,148 @@
 import Image from "next/image";
-import { Button } from "./ui/button";
-import { MessageSquarePlus, ClipboardList } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MessageSquarePlus, ClipboardList, X } from "lucide-react";
+import { useEffect } from "react";
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const sidebar = document.getElementById("mobile-sidebar");
+      const hamburger = document.getElementById("hamburger-menu");
+
+      if (window.innerWidth < 768 && isOpen && sidebar && hamburger) {
+        if (
+          !sidebar.contains(event.target as Node) &&
+          !hamburger.contains(event.target as Node)
+        ) {
+          onToggle();
+        }
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onToggle]);
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      if (isOpen) {
+        document.body.style.overflow = "hidden";
+      } else {
+        document.body.style.overflow = "unset";
+      }
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
   return (
-    <div className="w-65 bg-secondary border-r border-border flex flex-col h-screen transition-all duration-300 ease-in-out">
-      <div className="p-4 flex-shrink-0">
-        <Image
-          src="/logo.png"
-          alt="EduChat Logo"
-          width={32}
-          height={32}
-          className="transition-transform duration-200 hover:scale-105 rounded-full"
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ease-in-out opacity-100"
+          onClick={onToggle}
         />
-      </div>
+      )}
 
-      {/* Sidebar action buttons */}
-      <div className="px-3 flex-shrink-0">
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-foreground border-border transition-all duration-200"
+      {/* Sidebar Container - Different positioning for mobile vs desktop */}
+      <div
+        className={`
+          fixed md:relative
+          top-0 left-0 
+          w-65
+          h-full md:h-screen
+          z-50 md:z-auto
+          transition-all duration-300 ease-in-out
+          ${
+            isOpen
+              ? "translate-x-0 md:translate-x-0"
+              : "-translate-x-full md:-translate-x-full"
+          }
+          ${isOpen ? "md:w-80" : "md:w-0"}
+        `}
+      >
+        {/* Sidebar Content - Only visible when open */}
+        <div
+          id="mobile-sidebar"
+          className={`
+            w-80 h-full bg-secondary border-r border-border flex flex-col shadow-xl md:shadow-lg
+            transition-opacity duration-300 ease-in-out
+            ${isOpen ? "opacity-100" : "opacity-0 md:opacity-0"}
+          `}
+          inert={!isOpen}
+          aria-hidden={!isOpen}
         >
-          <MessageSquarePlus className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" />
-          New chat
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-foreground border-border transition-all duration-200"
-        >
-          <ClipboardList className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" />
-          Quiz
-        </Button>
-      </div>
+          {/* Mobile Header with Close Button */}
+          <div className="md:hidden flex items-center justify-between p-4 border-b border-border">
+            <Image
+              src="/logo.png"
+              alt="EduChat Logo"
+              width={32}
+              height={32}
+              className="rounded-full"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggle}
+              className="text-muted-foreground hover:text-foreground"
+              tabIndex={isOpen ? 0 : -1}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
 
-      {/* Chat History - Scrollable */}
-      <div className="flex-1 px-3 pt-6 overflow-hidden flex flex-col">
-        <h3 className="text-xs text-foreground pb-2 px-2 flex-shrink-0 tracking-wider">
-          Chats
-        </h3>
-        {/* <div className="flex-1 overflow-y-auto space-y-1 pr-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <div className="hidden md:block p-4 flex-shrink-0">
+            <Image
+              src="/logo.png"
+              alt="EduChat Logo"
+              width={32}
+              height={32}
+              className="transition-transform duration-200 hover:scale-105 rounded-full"
+            />
+          </div>
+
+          {/* Sidebar action buttons */}
+          <div className="px-3 flex-shrink-0">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-foreground border-border transition-all duration-200"
+              tabIndex={isOpen ? 0 : -1}
+            >
+              <MessageSquarePlus className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" />
+              New chat
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-foreground border-border transition-all duration-200"
+              tabIndex={isOpen ? 0 : -1}
+            >
+              <ClipboardList className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" />
+              Quiz
+            </Button>
+          </div>
+
+          {/* Chat History - Scrollable */}
+          <div className="flex-1 px-3 pt-6 overflow-hidden flex flex-col">
+            <h3 className="text-xs text-foreground pb-2 px-2 flex-shrink-0 tracking-wider">
+              Chats
+            </h3>
+            {/* <div className="flex-1 overflow-y-auto space-y-1 pr-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
           {chatSessions.map((chat) => (
             <Button
               key={chat.id}
@@ -56,225 +160,20 @@ export default function Sidebar() {
             </Button>
           ))}
         </div> */}
-        <div className="flex-1 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group bg-accent text-foreground"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group"
-          >
-            <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-              CZ4070- Cyber Threat Intelligence - Chat 8
-            </span>
-          </Button>
+            <div className="flex-1 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group bg-accent text-foreground"
+                tabIndex={isOpen ? 0 : -1}
+              >
+                <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
+                  CZ4070- Cyber Threat Intelligence - Chat 8
+                </span>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
