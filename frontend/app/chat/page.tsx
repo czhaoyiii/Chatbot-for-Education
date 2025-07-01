@@ -1,5 +1,6 @@
 "use client";
 
+import ChatInterface from "@/components/chat-interface";
 import Header from "@/components/header";
 import Sidebar from "@/components/sidebar";
 import { useEffect, useState } from "react";
@@ -50,6 +51,7 @@ export default function ChatPage() {
       <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
       <div className="flex-1 flex flex-col min-w-0 relative">
         <Header onToggleSidebar={toggleSidebar} />
+        <ChatInterface />
       </div>
     </div>
   );
