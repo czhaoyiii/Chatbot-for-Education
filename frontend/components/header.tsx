@@ -1,14 +1,18 @@
 "use client";
+
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/theme-context";
 import { ChevronDown, LogOut, Menu, Moon, Settings, Sun } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import type { Chat } from "@/types/chat"
+import { getModuleInfo } from "@/lib/utils"
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
+  selectedChat: Chat | null;
 }
 
-export default function Header({ onToggleSidebar }: HeaderProps) {
+export default function Header({ onToggleSidebar, selectedChat }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -34,6 +38,15 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     setDropdownOpen(false);
   };
 
+  const getModuleInfo = (chat: Chat | null) => {
+    if (!chat) return null;
+    const title = chat.title;
+    const chatMatch = title.match(/^(.+?)(?:\s*-\s*Chat\s+\d+)?$/);
+    return chatMatch ? chatMatch[1] : title;
+  };
+
+  const moduleInfo = getModuleInfo(selectedChat);
+
   return (
     <div className="flex items-center justify-between p-4 border-b border-border-foreground bg-background/80 backdrop-blur-sm relative z-30">
       <div className="flex items-center space-x-3">
@@ -49,14 +62,16 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
         {/* Module name in center on mobile */}
         <div className="md:hidden">
-          <span className="text-sm font-medium text-foreground">CZ4022</span>
+          <span className="text-sm font-medium text-foreground">
+            {selectedChat ? selectedChat.module : "EduChat"}
+          </span>
         </div>
       </div>
 
       {/* Center title for desktop */}
       <div className="hidden md:block">
         <span className="text-lg font-semibold text-foreground">
-          CZ4022 - Wireless & Mobile Networks
+          {moduleInfo || "EduChat"}
         </span>
       </div>
 

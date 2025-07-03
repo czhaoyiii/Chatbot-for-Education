@@ -1,9 +1,21 @@
 import Image from "next/image";
 import { useRef } from "react";
 import ChatInput from "./chat-input";
+import type { Chat } from "@/types/chat"
+import { getModuleInfo } from "@/lib/utils"
 
-export default function ChatInterface() {
+interface ChatInterfaceProps {
+  chats: Chat[];
+  selectedChat: Chat | null;
+}
+
+export default function ChatInterface({
+  chats,
+  selectedChat,
+}: ChatInterfaceProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const moduleInfo = getModuleInfo(selectedChat);
 
   return (
     <div className="flex-1 flex flex-col bg-background relative overflow-hidden z-0">
@@ -24,16 +36,29 @@ export default function ChatInterface() {
                 className="mx-auto mb-4 shadow-2xl rounded-full"
               />
             </div>
-            <h1 className="text-4xl font-bold mb-4 text-foreground">
-              Welcome to EduChat!
-            </h1>
-            <p className="text-xl text-muted-foreground leading-relaxed">
-              Select a module to start chatting.
-            </p>
+            {selectedChat ? (
+              <>
+                <h1 className="text-4xl font-bold mb-4 text-foreground">
+                  Welcome to {moduleInfo}!
+                </h1>
+                <p className="text-xl text-muted-foreground leading-relaxed">
+                  Ask me anything about {moduleInfo}.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-4xl font-bold mb-4 text-foreground">
+                  Welcome to EduChat!
+                </h1>
+                <p className="text-xl text-muted-foreground leading-relaxed">
+                  Select a module to start chatting.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>
-      <ChatInput />
+      <ChatInput chats={chats} selectedChat={selectedChat} />
     </div>
   );
 }

@@ -1,14 +1,29 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { MessageSquarePlus, ClipboardList, X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import type { Chat, Module } from "@/types/chat";
+import ModuleSelection from "./model-selection";
 
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
+  chats: Chat[];
+  setChats: React.Dispatch<React.SetStateAction<Chat[]>>;
+  selectedChatId: string | null;
+  setSelectedChatId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
+export default function Sidebar({
+  isOpen,
+  onToggle,
+  chats,
+  setChats,
+  selectedChatId,
+  setSelectedChatId,
+}: SidebarProps) {
+  const [showModuleDialog, setShowModuleDialog] = useState(false);
+
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -49,6 +64,29 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     };
   }, [isOpen]);
 
+  const handleNewChat = () => {
+    setShowModuleDialog(true);
+  };
+
+  const handleStartChat = (selectedModule: Module) => {
+    const chatCount =
+      chats.filter((chat) => chat.module === selectedModule.code).length + 1;
+    const newChat: Chat = {
+      id: `${selectedModule.code}-${Date.now()}`,
+      title: `${selectedModule.code} - ${selectedModule.name}${
+        chatCount > 1 ? ` - Chat ${chatCount}` : ""
+      }`,
+      module: selectedModule.code,
+      createdAt: new Date(),
+    };
+    setChats((prev) => [newChat, ...prev]);
+    setSelectedChatId(newChat.id);
+  };
+
+  const handleSelectChat = (chatId: string) => {
+    setSelectedChatId(chatId);
+  };
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -58,6 +96,13 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           onClick={onToggle}
         />
       )}
+
+      {/* Module Selection Dialog */}
+      <ModuleSelection
+        isOpen={showModuleDialog}
+        onClose={() => setShowModuleDialog(false)}
+        onStartChat={handleStartChat}
+      />
 
       {/* Sidebar Container - Different positioning for mobile vs desktop */}
       <div
@@ -123,6 +168,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               variant="ghost"
               className="w-full justify-start text-foreground border-border transition-all duration-200"
               tabIndex={isOpen ? 0 : -1}
+              onClick={handleNewChat}
             >
               <MessageSquarePlus className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" />
               New chat
@@ -142,34 +188,32 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             <h3 className="text-xs text-foreground pb-2 px-2 flex-shrink-0 tracking-wider">
               Chats
             </h3>
-            {/* <div className="flex-1 overflow-y-auto space-y-1 pr-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-          {chatSessions.map((chat) => (
-            <Button
-              key={chat.id}
-              variant="ghost"
-              className={`w-full justify-start text-left h-auto py-3 px-3 flex-shrink-0 transition-all duration-200 rounded-lg group min-h-[3rem] ${
-                currentChatId === chat.id
-                  ? "bg-accent text-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              }`}
-              onClick={() => onSelectChat(chat.id)}
-            >
-              <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-                {chat.title}
-              </span>
-            </Button>
-          ))}
-        </div> */}
             <div className="flex-1 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group bg-accent text-foreground"
-                tabIndex={isOpen ? 0 : -1}
-              >
-                <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-                  CZ4070- Cyber Threat Intelligence - Chat 8
-                </span>
-              </Button>
+              {chats.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground">
+                    No chat history yet
+                  </p>
+                </div>
+              ) : (
+                chats.map((chat) => (
+                  <Button
+                    key={chat.id}
+                    variant="ghost"
+                    className={`w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group text-foreground hover:bg-accent hover:text-foreground ${
+                      selectedChatId === chat.id
+                        ? "bg-accent text-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    }`}
+                    tabIndex={isOpen ? 0 : -1}
+                    onClick={() => handleSelectChat(chat.id)}
+                  >
+                    <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
+                      {chat.title}
+                    </span>
+                  </Button>
+                ))
+              )}
             </div>
           </div>
         </div>
