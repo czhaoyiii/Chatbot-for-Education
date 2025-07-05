@@ -124,11 +124,9 @@ export default function Sidebar({
         {/* Sidebar Content - Only visible when open */}
         <div
           id="mobile-sidebar"
-          className={`
-            w-80 h-full bg-secondary border-r border-border flex flex-col shadow-xl md:shadow-lg
-            transition-opacity duration-300 ease-in-out
-            ${isOpen ? "opacity-100" : "opacity-0 md:opacity-0"}
-          `}
+          className={`w-80 h-full bg-secondary border-r border-border flex flex-col shadow-xl md:shadow-lg transition-opacity duration-300 ease-in-out ${
+            isOpen ? "opacity-100" : "opacity-0 md:opacity-0"
+          }`}
           inert={!isOpen}
           aria-hidden={!isOpen}
         >

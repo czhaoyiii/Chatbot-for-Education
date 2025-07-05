@@ -3,7 +3,7 @@
 import ChatInterface from "@/components/chat-interface";
 import Header from "@/components/header";
 import Sidebar from "@/components/sidebar";
-import type { Chat } from "@/types/chat"
+import type { Chat, Message } from "@/types/chat";
 import { useEffect, useState } from "react";
 
 export default function ChatPage() {
@@ -50,6 +50,15 @@ export default function ChatPage() {
     }
   };
 
+  // Update chat messages
+  const handleUpdateChat = (chatId: string, messages: Message[]) => {
+    setChats((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === chatId ? { ...chat, messages } : chat
+      )
+    );
+  };
+
   const selectedChat = chats.find((chat) => chat.id === selectedChatId) || null;
 
   return (
@@ -64,7 +73,11 @@ export default function ChatPage() {
       />
       <div className="flex-1 flex flex-col min-w-0 relative">
         <Header onToggleSidebar={toggleSidebar} selectedChat={selectedChat} />
-        <ChatInterface chats={chats} selectedChat={selectedChat} />
+        <ChatInterface
+          chats={chats}
+          selectedChat={selectedChat}
+          onUpdateChat={handleUpdateChat}
+        />{" "}
       </div>
     </div>
   );

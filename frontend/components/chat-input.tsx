@@ -1,15 +1,20 @@
 import { ArrowUp, Plus } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useRef, useState } from "react";
-import type { Chat } from "@/types/chat"
-import { getModuleInfo } from "@/lib/utils"
+import type { Chat } from "@/types/chat";
+import { getModuleInfo } from "@/lib/utils";
 
 interface ChatInputProps {
   chats: Chat[];
   selectedChat: Chat | null;
+  onSendMessage: (message: string) => void;
 }
 
-export default function ChatInput({ chats, selectedChat }: ChatInputProps) {
+export default function ChatInput({
+  chats,
+  selectedChat,
+  onSendMessage,
+}: ChatInputProps) {
   const isDisabled = chats.length === 0 || !selectedChat;
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -30,8 +35,7 @@ export default function ChatInput({ chats, selectedChat }: ChatInputProps) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (input.trim() && !isDisabled) {
-      // TODO: Add actual message sending logic here
-      console.log("Sending message to", selectedChat?.title, ":", input.trim());
+      onSendMessage(input.trim());
 
       // Clear input after sending
       setInput("");
@@ -72,8 +76,8 @@ export default function ChatInput({ chats, selectedChat }: ChatInputProps) {
     if (!selectedChat) {
       return "Select a chat to continue...";
     }
-    const moduleInfo = getModuleInfo(selectedChat)
-    return `Ask about ${moduleInfo}...`
+    const moduleInfo = getModuleInfo(selectedChat);
+    return `Ask about ${moduleInfo}...`;
   };
 
   return (
