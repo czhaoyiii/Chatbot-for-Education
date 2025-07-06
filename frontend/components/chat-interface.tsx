@@ -1,0 +1,182 @@
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import ChatInput from "./chat-input";
+import type { Chat, Message } from "@/types/chat";
+import ThinkingIndicator from "./thinking-indicator";
+import MessageBubble from "./message-bubble";
+import { sendChatMessage } from "@/lib/chat-api";
+
+interface ChatInterfaceProps {
+  chats: Chat[];
+  selectedChat: Chat | null;
+  onUpdateChat: (chatId: string, messages: Message[]) => void;
+}
+
+export default function ChatInterface({
+  chats,
+  selectedChat,
+  onUpdateChat,
+}: ChatInterfaceProps) {
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const [isThinking, setIsThinking] = useState(false);
+  const messages = selectedChat?.messages || [];
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages, isThinking]);
+
+  const handleSendMessage = async (content: string) => {
+    if (!selectedChat) return;
+
+    // Add user message
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      content,
+      sender: "user",
+      timestamp: new Date(),
+    };
+
+    const updatedMessages = [...messages, userMessage];
+    onUpdateChat(selectedChat.id, updatedMessages);
+
+    // Show thinking indicator
+    setIsThinking(true);
+
+    try {
+      // Call your backend API
+      const startTime = Date.now();
+      const result = await sendChatMessage(content);
+      const endTime = Date.now();
+      const thinkingTime = Math.ceil((endTime - startTime) / 1000);
+
+      setIsThinking(false);
+
+      // AI response
+      if (result.success && result.response) {
+        // Add AI response
+        const aiMessage: Message = {
+          id: `ai-${Date.now()}`,
+          content: result.response,
+          sender: "ai",
+          timestamp: new Date(),
+          thinkingTime,
+        };
+
+        const finalMessages = [...updatedMessages, aiMessage];
+        onUpdateChat(selectedChat.id, finalMessages);
+      } else {
+        // Handle error case
+        const errorMessage: Message = {
+          id: `ai-${Date.now()}`,
+          content: `Sorry, I encountered an error: ${
+            result.error || "Unknown error"
+          }. Please try again.`,
+          sender: "ai",
+          timestamp: new Date(),
+          thinkingTime,
+        };
+
+        const finalMessages = [...updatedMessages, errorMessage];
+        onUpdateChat(selectedChat.id, finalMessages);
+      }
+    } catch (error) {
+      setIsThinking(false);
+
+      // Add error message
+      const errorMessage: Message = {
+        id: `ai-${Date.now()}`,
+        content:
+          "Sorry, I'm having trouble connecting to the server. Please check your connection and try again.",
+        sender: "ai",
+        timestamp: new Date(),
+        thinkingTime: 1,
+      };
+
+      const finalMessages = [...updatedMessages, errorMessage];
+      onUpdateChat(selectedChat.id, finalMessages);
+    }
+  };
+
+  if (!selectedChat) {
+    return (
+      <div className="flex-1 flex flex-col bg-background relative overflow-hidden z-0">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center max-w-2xl px-4 animate-fade-in">
+              <div className="mb-6">
+                <Image
+                  src="/logo.png"
+                  alt="EduChat Logo"
+                  width={64}
+                  height={64}
+                  className="mx-auto mb-4 shadow-2xl rounded-full"
+                />
+              </div>
+              <h1 className="text-4xl font-bold mb-4 text-foreground">
+                Welcome to EduChat!
+              </h1>
+              <p className="text-xl text-muted-foreground leading-relaxed">
+                Select a module to start chatting.
+              </p>
+            </div>
+          </div>
+        </div>
+        <ChatInput
+          chats={chats}
+          selectedChat={selectedChat}
+          onSendMessage={handleSendMessage}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col bg-background relative overflow-hidden z-0">
+      {/* Messages Area */}
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent px-4 py-4"
+        style={{ paddingBottom: "160px" }}
+      >
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center max-w-2xl px-4 animate-fade-in">
+              <div className="mb-6">
+                <Image
+                  src="/logo.png"
+                  alt="EduChat Logo"
+                  width={64}
+                  height={64}
+                  className="mx-auto mb-4 shadow-2xl rounded-full"
+                />
+              </div>
+              <h1 className="text-4xl font-bold mb-4 text-foreground">
+                Welcome to {selectedChat.module}!
+              </h1>
+              <p className="text-xl text-muted-foreground leading-relaxed">
+                Ask me anything about {selectedChat.title.split(" - Chat")[0]}.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="max-w-4xl mx-auto">
+            {messages.map((message) => (
+              <MessageBubble key={message.id} message={message} />
+            ))}
+            {isThinking && <ThinkingIndicator />}
+          </div>
+        )}
+      </div>
+      <ChatInput
+        chats={chats}
+        selectedChat={selectedChat}
+        onSendMessage={handleSendMessage}
+      />{" "}
+    </div>
+  );
+}

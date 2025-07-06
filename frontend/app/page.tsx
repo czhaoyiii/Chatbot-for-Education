@@ -2,7 +2,6 @@
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/theme-context";
 import {
-  MessageSquare,
   Sun,
   Moon,
   ArrowRight,
