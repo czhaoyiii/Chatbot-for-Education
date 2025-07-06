@@ -32,4 +32,5 @@ async def query(q: str):
     openai_client = AsyncOpenAI()
     deps = CPSSChatDeps(supabase=supabase_client, openai_client=openai_client)
     response = await cpss_chat_expert.run(q, deps=deps)
+    print(response.output)
     return response.output

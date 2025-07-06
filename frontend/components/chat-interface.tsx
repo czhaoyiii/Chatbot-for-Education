@@ -2,9 +2,9 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import ChatInput from "./chat-input";
 import type { Chat, Message } from "@/types/chat";
-import { getModuleInfo } from "@/lib/utils";
 import ThinkingIndicator from "./thinking-indicator";
 import MessageBubble from "./message-bubble";
+import { sendChatMessage } from "@/lib/chat-api";
 
 interface ChatInterfaceProps {
   chats: Chat[];
@@ -47,34 +47,59 @@ export default function ChatInterface({
     // Show thinking indicator
     setIsThinking(true);
 
-    // Simulate AI thinking time (2-8 seconds)
-    const thinkingTime = Math.floor(Math.random() * 7) + 2;
+    try {
+      // Call your backend API
+      const startTime = Date.now();
+      const result = await sendChatMessage(content);
+      const endTime = Date.now();
+      const thinkingTime = Math.ceil((endTime - startTime) / 1000);
 
-    setTimeout(() => {
       setIsThinking(false);
 
-      // Generate AI response
-      const aiMessage: Message = {
+      // AI response
+      if (result.success && result.response) {
+        // Add AI response
+        const aiMessage: Message = {
+          id: `ai-${Date.now()}`,
+          content: result.response,
+          sender: "ai",
+          timestamp: new Date(),
+          thinkingTime,
+        };
+
+        const finalMessages = [...updatedMessages, aiMessage];
+        onUpdateChat(selectedChat.id, finalMessages);
+      } else {
+        // Handle error case
+        const errorMessage: Message = {
+          id: `ai-${Date.now()}`,
+          content: `Sorry, I encountered an error: ${
+            result.error || "Unknown error"
+          }. Please try again.`,
+          sender: "ai",
+          timestamp: new Date(),
+          thinkingTime,
+        };
+
+        const finalMessages = [...updatedMessages, errorMessage];
+        onUpdateChat(selectedChat.id, finalMessages);
+      }
+    } catch (error) {
+      setIsThinking(false);
+
+      // Add error message
+      const errorMessage: Message = {
         id: `ai-${Date.now()}`,
-        content: generateAIResponse(content),
+        content:
+          "Sorry, I'm having trouble connecting to the server. Please check your connection and try again.",
         sender: "ai",
         timestamp: new Date(),
-        thinkingTime,
+        thinkingTime: 1,
       };
 
-      const finalMessages = [...updatedMessages, aiMessage];
+      const finalMessages = [...updatedMessages, errorMessage];
       onUpdateChat(selectedChat.id, finalMessages);
-    }, thinkingTime * 1000);
-  };
-
-  const generateAIResponse = (userQuestion: string): string => {
-    const responses = [
-      `That's a great question! Here's what you need to know:\n\nYour question: ${userQuestion}\n\nThis is a mock response. In a real implementation, this would be connected to an AI service that has been trained on your course materials.`,
-      `Excellent question! Let me break this down for you:\n\nYour question: ${userQuestion}\n\nThis is a simulated response. In the actual system, I would analyze your course materials and provide specific, relevant information based on your modules.`,
-      `Great question! Here's my response:\n\nYour question: ${userQuestion}\n\nThis is a demonstration response. The real system would connect to AI models trained specifically on your NTU course content to provide accurate, contextual answers.`,
-    ];
-
-    return responses[Math.floor(Math.random() * responses.length)];
+    }
   };
 
   if (!selectedChat) {
@@ -147,6 +172,11 @@ export default function ChatInterface({
           </div>
         )}
       </div>
-<ChatInput chats={chats} selectedChat={selectedChat} onSendMessage={handleSendMessage} />    </div>
+      <ChatInput
+        chats={chats}
+        selectedChat={selectedChat}
+        onSendMessage={handleSendMessage}
+      />{" "}
+    </div>
   );
 }
