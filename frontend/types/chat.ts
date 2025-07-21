@@ -19,3 +19,16 @@ export interface Message {
   thinkingTime?: number;
   isThinking?: boolean;
 }
+
+export interface Course {
+  id: string;
+  code: string;
+  name: string;
+  semester: string;
+  year: string;
+  studentsCount: number;
+  filesCount: number;
+  quizzesCount: number;
+  createdDate: string;
+  lastModified: string;
+}

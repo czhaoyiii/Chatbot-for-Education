@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export default function ThinkingIndicator() {
   return (
@@ -21,5 +21,5 @@ export default function ThinkingIndicator() {
         </div>
       </div>
     </div>
-  )
+  );
 }
