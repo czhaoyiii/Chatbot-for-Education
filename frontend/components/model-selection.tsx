@@ -1,42 +1,48 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
-import { useState } from "react"
-import type { Module } from "@/types/chat"
-import { modules } from "@/constants_temp/modules"
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import { useState } from "react";
+import type { Module } from "@/types/chat";
+import { modules } from "@/constants_temp/modules";
 
 interface ModuleSelectionProps {
-  isOpen: boolean
-  onClose: () => void
-  onStartChat: (module: Module) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onStartChat: (module: Module) => void;
 }
 
-export default function ModuleSelection({ isOpen, onClose, onStartChat }: ModuleSelectionProps) {
-  const [selectedModule, setSelectedModule] = useState<Module | null>(null)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
+export default function ModuleSelection({
+  isOpen,
+  onClose,
+  onStartChat,
+}: ModuleSelectionProps) {
+  const [selectedModule, setSelectedModule] = useState<Module | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleStartChat = () => {
     if (selectedModule) {
-      onStartChat(selectedModule)
-      handleClose()
+      onStartChat(selectedModule);
+      handleClose();
     }
-  }
+  };
 
   const handleClose = () => {
-    setSelectedModule(null)
-    setDropdownOpen(false)
-    onClose()
-  }
+    setSelectedModule(null);
+    setDropdownOpen(false);
+    onClose();
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-foreground">Select Module</h2>
+            <h2 className="text-xl font-semibold text-foreground">
+              Select Module
+            </h2>
             <Button
               variant="ghost"
               size="sm"
@@ -47,7 +53,9 @@ export default function ModuleSelection({ isOpen, onClose, onStartChat }: Module
             </Button>
           </div>
 
-          <p className="text-muted-foreground mb-6">What module do you want to chat with?</p>
+          <p className="text-muted-foreground mb-6">
+            What module do you want to chat with?
+          </p>
 
           <div className="relative mb-6">
             <Button
@@ -55,9 +63,21 @@ export default function ModuleSelection({ isOpen, onClose, onStartChat }: Module
               className="w-full justify-between text-left bg-transparent"
               onClick={() => setDropdownOpen(!dropdownOpen)}
             >
-              {selectedModule ? `${selectedModule.code} - ${selectedModule.name}` : "Choose a module..."}
-              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              {selectedModule
+                ? `${selectedModule.code} - ${selectedModule.name}`
+                : "Choose a module..."}
+              <svg
+                className="w-4 h-4 ml-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </Button>
 
@@ -68,8 +88,8 @@ export default function ModuleSelection({ isOpen, onClose, onStartChat }: Module
                     key={module.code}
                     className="w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors duration-200 first:rounded-t-md last:rounded-b-md"
                     onClick={() => {
-                      setSelectedModule(module)
-                      setDropdownOpen(false)
+                      setSelectedModule(module);
+                      setDropdownOpen(false);
                     }}
                   >
                     {module.code} - {module.name}
@@ -80,7 +100,11 @@ export default function ModuleSelection({ isOpen, onClose, onStartChat }: Module
           </div>
 
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 bg-transparent" onClick={handleClose}>
+            <Button
+              variant="outline"
+              className="flex-1 bg-transparent"
+              onClick={handleClose}
+            >
               Cancel
             </Button>
             <Button
@@ -94,5 +118,5 @@ export default function ModuleSelection({ isOpen, onClose, onStartChat }: Module
         </div>
       </div>
     </div>
-  )
+  );
 }

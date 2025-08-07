@@ -3,6 +3,7 @@
 import ChatInterface from "@/components/chat-interface";
 import Header from "@/components/header";
 import Sidebar from "@/components/sidebar";
+import ProtectedRoute from "@/components/protected-route";
 import type { Chat, Message } from "@/types/chat";
 import { useEffect, useState } from "react";
 
@@ -62,23 +63,25 @@ export default function ChatPage() {
   const selectedChat = chats.find((chat) => chat.id === selectedChatId) || null;
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onToggle={toggleSidebar}
-        chats={chats}
-        setChats={setChats}
-        selectedChatId={selectedChatId}
-        setSelectedChatId={setSelectedChatId}
-      />
-      <div className="flex-1 flex flex-col min-w-0 relative">
-        <Header onToggleSidebar={toggleSidebar} selectedChat={selectedChat} />
-        <ChatInterface
+    <ProtectedRoute>
+      <div className="flex h-screen bg-background text-foreground overflow-hidden">
+        <Sidebar
+          isOpen={sidebarOpen}
+          onToggle={toggleSidebar}
           chats={chats}
-          selectedChat={selectedChat}
-          onUpdateChat={handleUpdateChat}
-        />{" "}
+          setChats={setChats}
+          selectedChatId={selectedChatId}
+          setSelectedChatId={setSelectedChatId}
+        />
+        <div className="flex-1 flex flex-col min-w-0 relative">
+          <Header onToggleSidebar={toggleSidebar} selectedChat={selectedChat} />
+          <ChatInterface
+            chats={chats}
+            selectedChat={selectedChat}
+            onUpdateChat={handleUpdateChat}
+          />{" "}
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }
