@@ -1,6 +1,8 @@
 "use client";
+
+import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/contexts/theme-context";
 import {
   Sun,
   Moon,
@@ -9,11 +11,21 @@ import {
   BookOpen,
   Clock,
 } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useTheme } from "@/contexts/theme-context";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function HomePage() {
   const { theme, toggleTheme } = useTheme();
+  const { user, token } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (user && token) {
+      router.push("/chat")
+    }
+  }, [user, token, router])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -46,7 +58,7 @@ export default function HomePage() {
                   <Moon className="w-4 h-4" />
                 )}
               </Button>
-              <Link href="/chat">
+              <Link href="/login">
                 <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
                   Sign In
                 </Button>
@@ -81,7 +93,7 @@ export default function HomePage() {
             your professors and tutors aren't available.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/chat">
+            <Link href="/login">
               <Button
                 size="lg"
                 className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-4 text-lg"
@@ -216,7 +228,7 @@ export default function HomePage() {
             with their AI study companion. Your course materials are waiting for
             you.
           </p>
-          <Link href="/chat">
+          <Link href="/login">
             <Button
               size="lg"
               className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-12 py-4 text-lg"

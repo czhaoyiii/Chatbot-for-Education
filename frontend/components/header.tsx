@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/theme-context";
+import { useAuth } from "@/contexts/auth-context";
+import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   LogOut,
@@ -32,6 +34,8 @@ export default function Header({
 }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+  const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,6 +56,12 @@ export default function Header({
 
   const handleToggleTheme = () => {
     toggleTheme();
+    setDropdownOpen(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.push("/");
     setDropdownOpen(false);
   };
 
@@ -132,7 +142,7 @@ export default function Header({
             <div
               className={`w-8 h-8 bg-gradient-to-br ${getAvatarColor()} rounded-full flex items-center justify-center text-sm font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105`}
             >
-              ZY
+              {user?.name?.slice(0, 2).toUpperCase() || "ZY"}
             </div>
             <ChevronDown
               className={`w-4 h-4 text-muted-foreground transition-transform duration-200 hidden md:block ${
@@ -199,6 +209,7 @@ export default function Header({
                 <Button
                   variant="ghost"
                   className="w-full justify-start text-muted-foreground hover:bg-accent hover:text-red-500 transition-all duration-200 px-4 py-2 rounded-none"
+                  onClick={handleLogout}
                 >
                   <LogOut className="w-4 h-4 mr-3" />
                   Sign out
