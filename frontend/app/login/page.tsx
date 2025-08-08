@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTheme } from "@/contexts/theme-context";
 import { useAuth } from "@/contexts/auth-context";
+import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Sun, Moon, MessageSquare, Mail } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner"
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 type LoginStep = "email" | "otp";
@@ -43,14 +44,31 @@ export default function LoginPage() {
 
     setIsLoading(true);
 
-    // Simulate API call to send OTP
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep("otp");
-      toast.success("OTP sent", {
-        description: `OTP sent to ${email}`,
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+        },
       });
-    }, 1500);
+
+      if (error) {
+        toast.error("Failed to send OTP", {
+          description: error.message,
+        });
+      } else {
+        setStep("otp");
+        toast.success("OTP sent", {
+          description: `OTP sent to ${email}`,
+        });
+      }
+    } catch (error) {
+      toast.error("Network error", {
+        description: "Please check your connection and try again",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -82,12 +100,24 @@ export default function LoginPage() {
   const handleOtpVerification = async (otpCode: string) => {
     setIsLoading(true);
 
-    // Simulate API call to verify OTP
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otpCode,
+        type: "email",
+      });
 
-      // Simulate success/failure - for demo, only accept "123456" as valid OTP
-      if (otpCode === "123456") {
+      if (error) {
+        toast.error("Invalid OTP", {
+          description: "Please check your code and try again.",
+        });
+        setOtp(["", "", "", "", "", ""]);
+        // Focus the first OTP input after clearing
+        setTimeout(() => {
+          const firstInput = document.getElementById("otp-0");
+          firstInput?.focus();
+        }, 100);
+      } else if (data.user) {
         // Generate a mock JWT token (in real app, this comes from your backend)
         const mockToken = `educhat_token_${Date.now()}_${Math.random()
           .toString(36)
@@ -99,20 +129,23 @@ export default function LoginPage() {
         toast.success("Login successful", {
           description: "Welcome to EduChat!",
         });
+
         setTimeout(() => {
           router.push("/chat");
         }, 1000);
-      } else {
-        toast.error("Invalid OTP", {
-          description: "Please check your code and try again.",
-        });
-        setOtp(["", "", "", "", "", ""]);
-        setTimeout(() => {
-          const firstInput = document.getElementById("otp-0")
-          firstInput?.focus()
-        }, 100)
       }
-    }, 1500);
+    } catch (error) {
+      toast.error("Network error", {
+        description: "Please check your connection and try again",
+      });
+      setOtp(["", "", "", "", "", ""]);
+      setTimeout(() => {
+        const firstInput = document.getElementById("otp-0");
+        firstInput?.focus();
+      }, 100);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
