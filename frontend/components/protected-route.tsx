@@ -8,17 +8,28 @@ import { useEffect } from "react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredRole?: string;
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+export default function ProtectedRoute({
+  children,
+  requiredRole,
+}: ProtectedRouteProps) {
   const { user, token, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && (!user || !token)) {
       router.push("/login");
+      return;
     }
-  }, [user, token, isLoading, router]);
+
+    if (!isLoading && user && requiredRole && user.role !== requiredRole) {
+      // Redirect students trying to access professor routes to chat
+      router.push("/chat");
+      return;
+    }
+  }, [user, token, isLoading, router, requiredRole]);
 
   if (isLoading) {
     return (
@@ -33,6 +44,10 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user || !token) {
     return null; // Will redirect to login
+  }
+
+  if (requiredRole && user.role !== requiredRole) {
+    return null; // Will redirect to appropriate page
   }
 
   return <>{children}</>;

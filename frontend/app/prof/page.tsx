@@ -6,7 +6,7 @@ import ProtectedRoute from "@/components/protected-route";
 
 export default function ProfPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requiredRole="professor">
       <div className="flex h-screen bg-background text-foreground overflow-hidden">
         <div className="flex-1 flex flex-col">
           <Header variant="professor" />

@@ -2,18 +2,21 @@
 
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
+import { getUserData } from "@/lib/user-api";
 
 interface User {
   email: string;
   name: string;
+  role: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, token: string) => void;
+  login: (email: string, token: string) => void; // Removed role parameter since we fetch from database
   logout: () => void;
   isLoading: boolean;
+  refreshUserData: () => Promise<void>; // Added function to refresh user data from database
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,6 +25,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const fetchUserData = async (email: string) => {
+    try {
+      const response = await getUserData(email);
+      if (response.success && response.user) {
+        const userData: User = {
+          email: response.user.email,
+          name: response.user.email.split("@")[0],
+          role: response.user.role,
+        };
+        setUser(userData);
+        localStorage.setItem(
+          "educhat_user",
+          JSON.stringify({
+            email: userData.email,
+            name: userData.name,
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch user data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const refreshUserData = async () => {
+    if (user?.email) {
+      await fetchUserData(user.email);
+    }
+  };
 
   useEffect(() => {
     // Check for existing token on mount
@@ -32,33 +66,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const userData = JSON.parse(savedUser);
         setToken(savedToken);
-        setUser(userData);
+        fetchUserData(userData.email);
       } catch (error) {
         // Clear invalid data
         localStorage.removeItem("educhat_token");
         localStorage.removeItem("educhat_user");
+        setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   }, []);
 
   const login = (email: string, authToken: string) => {
-    const userData: User = {
-      email,
-      name: email.split("@")[0], // Extract name from email
-    };
-
+    setIsLoading(true);
     setToken(authToken);
-    setUser(userData);
 
-    // Store in localStorage with 10-day expiration
+    // Store token with expiration
     const expirationDate = new Date();
     expirationDate.setDate(expirationDate.getDate() + 10);
 
     localStorage.setItem("educhat_token", authToken);
-    localStorage.setItem("educhat_user", JSON.stringify(userData));
     localStorage.setItem("educhat_token_expiry", expirationDate.toISOString());
+
+    fetchUserData(email);
   };
 
   const logout = () => {
@@ -87,7 +118,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider
+      value={{ user, token, login, logout, isLoading, refreshUserData }}
+    >
       {children}
     </AuthContext.Provider>
   );

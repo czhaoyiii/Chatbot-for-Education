@@ -13,6 +13,7 @@ import { ArrowLeft, Sun, Moon, MessageSquare, Mail } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { loginUser } from "@/lib/user-api";
 
 type LoginStep = "email" | "otp";
 
@@ -118,21 +119,26 @@ export default function LoginPage() {
           firstInput?.focus();
         }, 100);
       } else if (data.user) {
-        // Generate a mock JWT token (in real app, this comes from your backend)
-        const mockToken = `educhat_token_${Date.now()}_${Math.random()
-          .toString(36)
-          .substr(2, 9)}`;
+        // Call backend user management to check/create user
+        try {
+          const userData = await loginUser(email);
 
-        // Login user with persistent token
-        login(email, mockToken);
+          // Generate a mock JWT token (in real app, this comes from your backend)
+          const mockToken = `educhat_token_${Date.now()}_${Math.random()
+            .toString(36)
+            .substr(2, 9)}`;
 
-        toast.success("Login successful", {
-          description: "Welcome to EduChat!",
-        });
+          // Login user with persistent token and role info
+          login(email, mockToken);
 
-        setTimeout(() => {
-          router.push("/chat");
-        }, 1000);
+          toast.success("Login successful", {
+            description: `Welcome to EduChat!`,
+          });
+        } catch (error) {
+          toast.error("User management error", {
+            description: "Failed to process user login",
+          });
+        }
       }
     } catch (error) {
       toast.error("Network error", {

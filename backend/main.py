@@ -9,6 +9,7 @@ from ingestion import files_upload
 from agent import cpss_chat_expert, CPSSChatDeps
 from supabase.client import create_client
 from openai import AsyncOpenAI
+from user_management import login_user, UserLoginRequest
 
 app = FastAPI()
 
@@ -22,6 +23,14 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "success"}
+
+@app.post("/user-management")
+async def user_management(request: UserLoginRequest):
+    """
+    Handle user login - create user with Student role if first time,
+    or return existing user (preserving admin-assigned Professor role)
+    """
+    return await login_user(request)
 
 @app.post("/upload-files")
 async def upload_files(files: List[UploadFile] = File(...)):

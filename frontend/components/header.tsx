@@ -155,7 +155,7 @@ export default function Header({
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-xl z-[100] animate-fade-in">
               <div className="py-2">
-                {variant === "chat" ? (
+                {variant === "chat" && user?.role === "professor" && (
                   <Link href="/prof">
                     <Button
                       variant="ghost"
@@ -166,7 +166,8 @@ export default function Header({
                       Professor Mode
                     </Button>
                   </Link>
-                ) : (
+                )}
+                {variant === "professor" && (
                   <Link href="/chat">
                     <Button
                       variant="ghost"
