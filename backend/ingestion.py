@@ -3,7 +3,7 @@ import os
 from time import time
 from pathlib import Path
 from dotenv import load_dotenv
-from typing import Union
+from typing import Union, Dict, Optional
 
 # Import Docling (Text extraction from unstructured)
 from docling.datamodel.base_models import InputFormat
@@ -47,7 +47,12 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=690, chunk_overlap=100
 # Initialize Gemini embedding model
 embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-exp-03-07")
 
-def files_upload(documents_dir: Union[str, Path]) -> str:
+def files_upload(
+    documents_dir: Union[str, Path],
+    *,
+    course_id: Optional[str] = None,
+    course_file_ids: Optional[Dict[str, str]] = None,
+) -> str:
     start = time()
     try:
         documents_path = Path(documents_dir)
@@ -80,8 +85,18 @@ def files_upload(documents_dir: Union[str, Path]) -> str:
                         "total_chunks": total_chunks
                     }
                 })
+        # Insert into ingested_documents with required fields
         for chunk in all_chunks:
-            supabase.table("ingested_documents").insert(chunk).execute()
+            row = {
+                "content": chunk["content"],
+                "embedding": chunk["embedding"],
+            }
+            # Optionally include course linkage if provided
+            if course_id:
+                row["course_id"] = course_id
+            if course_file_ids and chunk.get("filename") in course_file_ids:
+                row["course_file_id"] = course_file_ids[chunk["filename"]]
+            supabase.table("ingested_documents").insert(row).execute()
 
         # End time
         end = time()
@@ -93,31 +108,7 @@ def files_upload(documents_dir: Union[str, Path]) -> str:
 
 
 def pdf_upload():
-    try:
-        all_chunks = []
-        for pdf in pdf_files:
-            result = converter.convert(str(pdf))
-            text = result.document.export_to_markdown()
-            chunks = text_splitter.create_documents([text])
-            total_chunks = len(chunks)
-            for idx, chunk in enumerate(chunks):
-                embedding = embeddings.embed_query(chunk.page_content)
-                all_chunks.append({
-                    "filename": pdf.name,
-                    "content": chunk.page_content,
-                    "embedding": embedding,
-                    "metadata": {
-                        "source": str(pdf),
-                        "chunk_index": idx,
-                        "total_chunks": total_chunks
-                    }
-                })
-        for chunk in all_chunks:
-            supabase.table("ingested_documents").insert(chunk).execute()
-
-        # End time
-        end = time()
-        print(f"Ingested {len(all_chunks)} chunks from {len(pdf_files)} PDFs. Time taken: {end - start:.3f}")
-        return f"Ingested {len(all_chunks)} chunks from {len(pdf_files)} PDFs. Time taken: {end - start:.3f}"
-    except Exception as e:
-        print("An exception occured:", e)
+    """
+    Deprecated. Use files_upload() instead.
+    """
+    raise NotImplementedError("Use files_upload() with appropriate parameters.")

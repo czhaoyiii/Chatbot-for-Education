@@ -2,10 +2,11 @@ import os
 import tempfile
 import shutil
 from pathlib import Path
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from ingestion import files_upload
+from course_creation import create_course as create_course_service
 from agent import cpss_chat_expert, CPSSChatDeps
 from supabase.client import create_client
 from openai import AsyncOpenAI
@@ -108,4 +109,17 @@ async def query(q: str):
     response = await cpss_chat_expert.run(q, deps=deps)
     print(response.output)
     return response.output
+
+
+@app.post("/courses/create")
+async def create_course_route(
+    code: str = Form(...),
+    name: str = Form(...),
+    user_email: str = Form(...),
+    files: List[UploadFile] = File(...),
+):
+    # Delegate to service function for modularity
+    return await create_course_service(
+        code=code, name=name, user_email=user_email, files=files
+    )
 
