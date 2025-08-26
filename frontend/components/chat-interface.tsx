@@ -5,6 +5,7 @@ import type { Chat, Message } from "@/types/chat";
 import ThinkingIndicator from "./thinking-indicator";
 import MessageBubble from "./message-bubble";
 import { sendChatMessage } from "@/lib/chat-api";
+import { useAuth } from "@/contexts/auth-context";
 
 interface ChatInterfaceProps {
   chats: Chat[];
@@ -18,6 +19,8 @@ export default function ChatInterface({
   onUpdateChat,
 }: ChatInterfaceProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const [isThinking, setIsThinking] = useState(false);
   const messages = selectedChat?.messages || [];
@@ -50,7 +53,12 @@ export default function ChatInterface({
     try {
       // Call your backend API
       const startTime = Date.now();
-      const result = await sendChatMessage(content);
+      const result = await sendChatMessage(content, {
+        userId: user?.id,
+        userEmail: user?.email,
+        courseCode: selectedChat.module,
+        sessionId: sessionId || undefined,
+      });
       const endTime = Date.now();
       const thinkingTime = Math.ceil((endTime - startTime) / 1000);
 
@@ -58,17 +66,23 @@ export default function ChatInterface({
 
       // AI response
       if (result.success && result.response) {
+        if (result.session_id && !sessionId) {
+          setSessionId(result.session_id);
+          // Replace temp chat ID with persisted session ID in parent state
+          onUpdateChat(result.session_id, updatedMessages);
+          // Note: caller must ensure replacing the chat item ID in the list; we handle messages update here
+        }
         // Add AI response
         const aiMessage: Message = {
           id: `ai-${Date.now()}`,
           content: result.response,
           sender: "ai",
           timestamp: new Date(),
-          thinkingTime,
+          thinkingTime: result.thinking_time ?? thinkingTime,
         };
 
         const finalMessages = [...updatedMessages, aiMessage];
-        onUpdateChat(selectedChat.id, finalMessages);
+        onUpdateChat(result.session_id || selectedChat.id, finalMessages);
       } else {
         // Handle error case
         const errorMessage: Message = {

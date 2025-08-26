@@ -1,53 +1,49 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { message } = await request.json()
+    const { message, userId, userEmail, courseCode, courseId, sessionId } =
+      await request.json();
 
     if (!message) {
-      return NextResponse.json({ error: "Message is required" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Message is required" },
+        { status: 400 }
+      );
     }
 
-    // Call your backend API
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:8000"
-    const response = await fetch(`${backendUrl}/query?q=${encodeURIComponent(message)}`, {
+    // Call backend chat endpoint to persist & generate response
+    const backendUrl =
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      "http://localhost:8000";
+    const response = await fetch(`${backendUrl}/chat/send`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message,
+        user_id: userId,
+        user_email: userEmail,
+        course_code: courseCode,
+        course_id: courseId,
+        session_id: sessionId,
+      }),
+    });
 
     if (!response.ok) {
-      throw new Error(`Backend API error: ${response.status}`)
+      throw new Error(`Backend API error: ${response.status}`);
     }
 
-    // Get the raw text response
-    const rawData = await response.text()
-
-    // Remove surrounding quotes if they exist
-    let cleanedData = rawData
-    if (rawData.startsWith('"') && rawData.endsWith('"')) {
-      cleanedData = rawData.slice(1, -1)
-    }
-
-    // Unescape any escaped quotes
-    cleanedData = cleanedData.replace(/\\"/g, '"')
-
-    // Convert literal \n to actual newlines
-    cleanedData = cleanedData.replace(/\\n/g, "\n")
-
-    return NextResponse.json({
-      response: cleanedData,
-      success: true,
-    })
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
-    console.error("Chat API error:", error)
+    console.error("Chat API error:", error);
     return NextResponse.json(
       {
         error: "Failed to get response from AI",
         success: false,
       },
-      { status: 500 },
-    )
+      { status: 500 }
+    );
   }
 }

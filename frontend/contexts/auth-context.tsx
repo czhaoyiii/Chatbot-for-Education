@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { getUserData } from "@/lib/user-api";
 
 interface User {
+  id: string;
   email: string;
   name: string;
   role: string;
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await getUserData(email);
       if (response.success && response.user) {
         const userData: User = {
+          id: response.user.id,
           email: response.user.email,
           name: response.user.email.split("@")[0],
           role: response.user.role,
@@ -39,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(
           "educhat_user",
           JSON.stringify({
+            id: userData.id,
             email: userData.email,
             name: userData.name,
           })

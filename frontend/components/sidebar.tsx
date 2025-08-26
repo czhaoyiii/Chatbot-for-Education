@@ -72,7 +72,7 @@ export default function Sidebar({
     const chatCount =
       chats.filter((chat) => chat.module === selectedModule.code).length + 1;
     const newChat: Chat = {
-      id: `${selectedModule.code}-${Date.now()}`,
+      id: `temp-${selectedModule.code}-${Date.now()}`,
       title: `${selectedModule.code} - ${selectedModule.name}${
         chatCount > 1 ? ` - Chat ${chatCount}` : ""
       }`,

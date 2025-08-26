@@ -34,9 +34,12 @@ export default function LoginPage() {
   }, [user, token, router]);
 
   const isValidNTUEmail = (email: string) => {
-    return (
-      email.endsWith("@e.ntu.edu.sg") && email.length > "@e.ntu.edu.sg".length
-    );
+    const lower = email.trim().toLowerCase();
+    const ntu =
+      lower.endsWith("@e.ntu.edu.sg") && lower.length > "@e.ntu.edu.sg".length;
+    const gmail =
+      lower.endsWith("@gmail.com") && lower.length > "@gmail.com".length;
+    return ntu || gmail;
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -231,7 +234,7 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your NTU email"
+                    placeholder="Enter your email (NTU or gmail.com)"
                     className="bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
