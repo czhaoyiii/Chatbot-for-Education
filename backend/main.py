@@ -6,7 +6,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from ingestion import files_upload
-from course_creation import create_course as create_course_service
+from course_creation import create_course
 from agent import cpss_chat_expert, CPSSChatDeps
 from supabase.client import create_client
 from openai import AsyncOpenAI
@@ -119,7 +119,7 @@ async def create_course_route(
     files: List[UploadFile] = File(...),
 ):
     # Delegate to service function for modularity
-    return await create_course_service(
+    return await create_course(
         code=code, name=name, user_email=user_email, files=files
     )
 

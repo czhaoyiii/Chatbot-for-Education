@@ -97,7 +97,6 @@ async def retrieve_relevant_documentation(ctx: RunContext[CPSSChatDeps], user_qu
         formatted_chunks = []
         for doc in result.data:
             chunk_text = f"""
-            # {doc['filename']}
             {doc['content']}
             """
             formatted_chunks.append(chunk_text)
