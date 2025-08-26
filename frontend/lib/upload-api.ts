@@ -25,7 +25,9 @@ export async function uploadFiles(
       formData.append("files", file);
     });
 
-    const response = await fetch("http://localhost:8000/upload-files", {
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+    const response = await fetch(`${backendUrl}/upload-files`, {
       method: "POST",
       body: formData,
     });
@@ -48,10 +50,63 @@ export async function uploadFiles(
 
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const response = await fetch("http://localhost:8000/health");
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+    const response = await fetch(`${backendUrl}/`);
     return response.ok;
   } catch (error) {
     console.error("Backend health check failed:", error);
     return false;
+  }
+}
+
+export interface CreateCourseResponse {
+  success: boolean;
+  message: string;
+  course: {
+    id: string;
+    code: string;
+    name: string;
+    created_by: string;
+    files_count: number;
+    quizzes_count: number;
+    created_at: string;
+  };
+  files: Array<{ filename: string; size: number }>;
+  ingestion_result: string;
+}
+
+export async function createCourseWithFiles(params: {
+  code: string;
+  name: string;
+  userEmail: string;
+  files: File[];
+}): Promise<CreateCourseResponse | UploadError> {
+  try {
+    const { code, name, userEmail, files } = params;
+    const formData = new FormData();
+    formData.append("code", code);
+    formData.append("name", name);
+    formData.append("user_email", userEmail);
+    files.forEach((file) => formData.append("files", file));
+
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+    const response = await fetch(`${backendUrl}/courses/create`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || data.error || "Failed to create course");
+    }
+    return data as CreateCourseResponse;
+  } catch (error) {
+    console.error("Create course API error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
   }
 }

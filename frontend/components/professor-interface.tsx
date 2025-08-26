@@ -24,6 +24,13 @@ export default function ProfessorInterface() {
       ...newCourse,
       id: Date.now().toString(),
       createdDate: new Date().toISOString().split("T")[0],
+      // Provide sensible defaults if not provided
+      semester: (newCourse as any).semester ?? "",
+      year: (newCourse as any).year ?? new Date().getFullYear().toString(),
+      studentsCount: (newCourse as any).studentsCount ?? 0,
+      lastModified:
+        (newCourse as any).lastModified ??
+        new Date().toISOString().split("T")[0],
     };
     setCourses((prev) => [course, ...prev]);
     setCurrentView("dashboard");

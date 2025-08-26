@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { useState, useRef } from "react";
 import type { Course } from "@/types/chat";
-import { uploadFiles } from "@/lib/upload-api";
+import { createCourseWithFiles } from "@/lib/upload-api";
+import { useAuth } from "@/contexts/auth-context";
 
 interface CreateCourseFormProps {
   onCreateCourse: (course: Omit<Course, "id" | "createdDate">) => void;
@@ -27,6 +28,7 @@ export default function CreateCourseForm({
   onCancel,
   existingCourses,
 }: CreateCourseFormProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     code: "",
     name: "",
@@ -88,32 +90,46 @@ export default function CreateCourseForm({
     setUploadMessage("Uploading files and creating course...");
 
     try {
-      // First upload the files
-      const uploadResult = await uploadFiles(selectedFiles);
+      if (!user?.email) {
+        setUploadStatus("error");
+        setUploadMessage("You must be logged in to create a course.");
+        return;
+      }
 
-      if (uploadResult.success) {
-        // If files uploaded successfully, create the course
+      const result = await createCourseWithFiles({
+        code: formData.code.trim(),
+        name: formData.name.trim(),
+        userEmail: user.email,
+        files: selectedFiles,
+      });
+
+      if (result.success) {
+        // Reflect in local UI
         onCreateCourse({
           ...formData,
+          semester: "",
+          year: new Date().getFullYear().toString(),
+          studentsCount: 0,
           filesCount: selectedFiles.length,
           quizzesCount: 0,
+          lastModified: new Date().toISOString().split("T")[0],
         });
 
         setUploadStatus("success");
-        setUploadMessage("Course created successfully!");
+        setUploadMessage(result.message || "Course created successfully!");
 
         // Reset form
         setSelectedFiles([]);
         setFormData({ code: "", name: "" });
         setErrors({});
       } else {
+        const errMsg =
+          "error" in result ? result.error : "Failed to create course.";
         setUploadStatus("error");
-        setUploadMessage(
-          uploadResult.error || "Failed to upload files. Please try again."
-        );
+        setUploadMessage(errMsg);
         setErrors((prev) => ({
           ...prev,
-          files: uploadResult.error || "File upload failed.",
+          files: errMsg,
         }));
       }
     } catch (error) {
