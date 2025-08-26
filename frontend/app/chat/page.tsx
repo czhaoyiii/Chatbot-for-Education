@@ -15,6 +15,7 @@ export default function ChatPage() {
   const [desktopPreference, setDesktopPreference] = useState(true); // Desktop default: open
   const [mobilePreference, setMobilePreference] = useState(false); // Mobile default: closed
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -106,8 +107,12 @@ export default function ChatPage() {
   useEffect(() => {
     const loadMessages = async () => {
       if (!selectedChat) return;
-      if (selectedChat.messages && selectedChat.messages.length > 0) return;
+      if (selectedChat.messages && selectedChat.messages.length > 0) {
+        setIsLoadingHistory(false);
+        return;
+      }
       try {
+        setIsLoadingHistory(true);
         const msgs = await fetchSessionMessages(selectedChat.id);
         const mapped: Message[] = msgs.map((m) => ({
           id: m.id,
@@ -123,6 +128,8 @@ export default function ChatPage() {
         );
       } catch (e) {
         // ignore
+      } finally {
+        setIsLoadingHistory(false);
       }
     };
     loadMessages();
@@ -145,6 +152,7 @@ export default function ChatPage() {
             chats={chats}
             selectedChat={selectedChat}
             onUpdateChat={handleUpdateChat}
+            isLoadingHistory={isLoadingHistory}
           />{" "}
         </div>
       </div>

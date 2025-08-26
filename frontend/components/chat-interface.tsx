@@ -11,12 +11,14 @@ interface ChatInterfaceProps {
   chats: Chat[];
   selectedChat: Chat | null;
   onUpdateChat: (chatId: string, messages: Message[]) => void;
+  isLoadingHistory?: boolean;
 }
 
 export default function ChatInterface({
   chats,
   selectedChat,
   onUpdateChat,
+  isLoadingHistory = false,
 }: ChatInterfaceProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -159,23 +161,30 @@ export default function ChatInterface({
       >
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center max-w-2xl px-4 animate-fade-in">
-              <div className="mb-6">
-                <Image
-                  src="/logo.png"
-                  alt="EduChat Logo"
-                  width={64}
-                  height={64}
-                  className="mx-auto mb-4 shadow-2xl rounded-full"
-                />
+            {isLoadingHistory ? (
+              <div className="text-center">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading...</p>
               </div>
-              <h1 className="text-4xl font-bold mb-4 text-foreground">
-                Welcome to {selectedChat.module}!
-              </h1>
-              <p className="text-xl text-muted-foreground leading-relaxed">
-                Ask me anything about {selectedChat.title.split(" - Chat")[0]}.
-              </p>
-            </div>
+            ) : (
+              <div className="text-center max-w-2xl px-4 animate-fade-in">
+                <div className="mb-6">
+                  <Image
+                    src="/logo.png"
+                    alt="EduChat Logo"
+                    width={64}
+                    height={64}
+                    className="mx-auto mb-4 shadow-2xl rounded-full"
+                  />
+                </div>
+                <h1 className="text-4xl font-bold mb-4 text-foreground">
+                  Welcome to {selectedChat.module}!
+                </h1>
+                <p className="text-xl text-muted-foreground leading-relaxed">
+                  Ask me anything about {selectedChat.title.split(" - Chat")[0]}.
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="max-w-4xl mx-auto">
