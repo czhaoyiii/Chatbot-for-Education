@@ -69,18 +69,26 @@ export default function Sidebar({
   };
 
   const handleStartChat = (selectedModule: Module) => {
-    const chatCount =
-      chats.filter((chat) => chat.module === selectedModule.code).length + 1;
+    // Compute count from current non-temp chats to build the title
+    const persistedCount = chats.filter(
+      (c) => !c.id.startsWith("temp-") && c.module === selectedModule.code
+    ).length;
+    const seq = persistedCount + 1;
     const newChat: Chat = {
       id: `temp-${selectedModule.code}-${Date.now()}`,
-      title: `${selectedModule.code} - ${selectedModule.name}${
-        chatCount > 1 ? ` - Chat ${chatCount}` : ""
-      }`,
+      title: `${selectedModule.code} - ${selectedModule.name} - Chat ${seq}`,
       module: selectedModule.code,
       createdAt: new Date(),
     };
-    setChats((prev) => [newChat, ...prev]);
+
+    // Select the freshly created chat immediately
     setSelectedChatId(newChat.id);
+
+    // Replace any existing temp chat, then prepend the new one
+    setChats((prev) => {
+      const withoutEphemeral = prev.filter((c) => !c.id.startsWith("temp-"));
+      return [newChat, ...withoutEphemeral];
+    });
   };
 
   const handleSelectChat = (chatId: string) => {
