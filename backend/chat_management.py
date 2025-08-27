@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 from supabase.client import create_client
 
-from agent import cpss_chat_expert, CPSSChatDeps
+from agent import cpss_chat_expert, CPSSChatDeps, get_cpss_agent
 
 
 class ChatSendRequest(BaseModel):
@@ -140,10 +140,29 @@ async def chat_send(payload: ChatSendRequest):
             .execute()
         )
 
+        # Ensure we have course meta for prompt
+        if not course_code or not course_name:
+            cres_meta = (
+                supabase_client.table("courses")
+                .select("code, name")
+                .eq("id", course_id)
+                .execute()
+            )
+            if cres_meta.data and len(cres_meta.data) > 0:
+                course_code = course_code or cres_meta.data[0]["code"]
+                course_name = course_name or cres_meta.data[0]["name"]
+
         # Get AI response
         start = datetime.utcnow()
-        deps = CPSSChatDeps(supabase=supabase_client, openai_client=openai_client)
-        ai_output = await cpss_chat_expert.run(payload.message, deps=deps)
+        deps = CPSSChatDeps(
+            supabase=supabase_client,
+            openai_client=openai_client,
+            course_id=course_id,
+            course_code=course_code,
+        )
+        # Build a course-specific agent prompt
+        agent = get_cpss_agent(course_name, course_code)
+        ai_output = await agent.run(payload.message, deps=deps)
         end = datetime.utcnow()
         thinking_time = int((end - start).total_seconds())
         ai_text = ai_output.output if hasattr(ai_output, "output") else str(ai_output)

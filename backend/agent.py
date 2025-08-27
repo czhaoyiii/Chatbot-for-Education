@@ -4,7 +4,7 @@ from __future__ import annotations as _annotations
 import os
 from dotenv import load_dotenv
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 # Import PydanticAI (Agent creation)
 from pydantic_ai import Agent, RunContext
@@ -31,10 +31,15 @@ model = OpenAIModel(llm)
 class CPSSChatDeps:
     supabase: Client
     openai_client: AsyncOpenAI
+    # Context for scoping retrieval
+    course_id: Optional[str] = None
+    course_code: Optional[str] = None
 
 # Prompt for AI Agent (Instructions)
-system_prompt = """
-You are an expert in Cyber Physical System Security (CZ4055) - a NTU module that you have access to all the documentation to,
+# Base template; can be formatted with a specific course at runtime.
+system_prompt_template = (
+    """
+You are an expert in {course_title} ({course_code}) - a NTU module that you have access to all the documentation to,
 including lecture notes, slides, and other assignments to help you answer questions.
 
 Your only job is to assist with this and you don't answer other questions besides describing what you are able to do.
@@ -46,13 +51,21 @@ Then also always check the list of available documentation pages and retrieve th
 
 Always let the user know when you didn't find the answer in the documentation - be honest.
 """
+)
+
+def _build_system_prompt(course_title: Optional[str], course_code: Optional[str]) -> str:
+    # Fallbacks to maintain previous behavior if not provided
+    title = course_title or "Cyber Physical System Security"
+    code = course_code or "CZ4055"
+    return system_prompt_template.format(course_title=title, course_code=code)
 
 # Step 2: Define the agent
+# Default agent (fallback) with legacy course prompt
 cpss_chat_expert = Agent(
     model,
-    system_prompt=system_prompt,
+    system_prompt=_build_system_prompt(None, None),
     deps_type=CPSSChatDeps,
-    retries=2
+    retries=2,
 )
 
 async def get_embedding(text: str) -> List[float]:
@@ -63,7 +76,7 @@ async def get_embedding(text: str) -> List[float]:
     except Exception as e:
         print(f"Error getting embedding: {e}")
 
-# Step 3: Define the tools
+# Step 3: Define the tools for the default agent
 @cpss_chat_expert.tool
 async def retrieve_relevant_documentation(ctx: RunContext[CPSSChatDeps], user_query: str) -> str:
     """
@@ -80,12 +93,20 @@ async def retrieve_relevant_documentation(ctx: RunContext[CPSSChatDeps], user_qu
         # Get the embeddings for the query
         query_embedding = await get_embedding(user_query)
 
-        # Query Supabase for relevant documents
+        # Build an optional filter for course scoping
+        filter_payload = {}
+        if ctx.deps.course_id:
+            filter_payload["course_id"] = ctx.deps.course_id
+        elif ctx.deps.course_code:
+            filter_payload["course_code"] = ctx.deps.course_code
+
+        # Query Supabase for relevant documents, scoped by course when available
         result = ctx.deps.supabase.rpc(
             "match_ingested_documents",
             {
                 "query_embedding": query_embedding,
-                "match_count": 5
+                "match_count": 5,
+                "filter": filter_payload,
             }
         ).execute()
         print(result)
@@ -106,5 +127,54 @@ async def retrieve_relevant_documentation(ctx: RunContext[CPSSChatDeps], user_qu
     except Exception as e:
         print(f"Error retrieving documentation: {e}")
         return f"Error retrieving documentation: {str(e)}"
+
+
+def get_cpss_agent(course_title: Optional[str], course_code: Optional[str]) -> Agent:
+    """Build an Agent instance with a course-specific system prompt and same tools."""
+    agent = Agent(
+        model,
+        system_prompt=_build_system_prompt(course_title, course_code),
+        deps_type=CPSSChatDeps,
+        retries=2,
+    )
+
+    @agent.tool  # type: ignore[misc]
+    async def retrieve_relevant_documentation_dynamic(
+        ctx: RunContext[CPSSChatDeps], user_query: str
+    ) -> str:
+        try:
+            query_embedding = await get_embedding(user_query)
+
+            filter_payload = {}
+            if ctx.deps.course_id:
+                filter_payload["course_id"] = ctx.deps.course_id
+            elif ctx.deps.course_code:
+                filter_payload["course_code"] = ctx.deps.course_code
+
+            result = ctx.deps.supabase.rpc(
+                "match_ingested_documents",
+                {
+                    "query_embedding": query_embedding,
+                    "match_count": 5,
+                    "filter": filter_payload,
+                },
+            ).execute()
+
+            if not result.data:
+                return "No relevant documentation found."
+
+            formatted_chunks = []
+            for doc in result.data:
+                chunk_text = f"""
+                {doc['content']}
+                """
+                formatted_chunks.append(chunk_text)
+
+            return "\n\n---\n\n".join(formatted_chunks)
+        except Exception as e:
+            print(f"Error retrieving documentation: {e}")
+            return f"Error retrieving documentation: {str(e)}"
+
+    return agent
 
     

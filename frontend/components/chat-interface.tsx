@@ -35,6 +35,22 @@ export default function ChatInterface({
     }
   }, [messages, isThinking]);
 
+  // Reset session binding when switching selected chat
+  useEffect(() => {
+    if (!selectedChat) {
+      setSessionId(null);
+      setIsThinking(false);
+      return;
+    }
+    // If the selected chat is a persisted session, bind to its id; otherwise clear until first send
+    if (selectedChat.id && !selectedChat.id.startsWith("temp-")) {
+      setSessionId(selectedChat.id);
+    } else {
+      setSessionId(null);
+    }
+    setIsThinking(false);
+  }, [selectedChat?.id]);
+
   const handleSendMessage = async (content: string) => {
     if (!selectedChat) return;
 
@@ -181,7 +197,8 @@ export default function ChatInterface({
                   Welcome to {selectedChat.module}!
                 </h1>
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                  Ask me anything about {selectedChat.title.split(" - Chat")[0]}.
+                  Ask me anything about {selectedChat.title.split(" - Chat")[0]}
+                  .
                 </p>
               </div>
             )}
