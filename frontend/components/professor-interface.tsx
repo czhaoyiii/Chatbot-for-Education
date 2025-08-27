@@ -2,38 +2,110 @@
 
 import { Button } from "@/components/ui/button";
 import { Plus, BookOpen, FileText, ClipboardList } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import CreateCourseForm from "./professor/create-course-form";
 import CourseManagement from "./professor/course-management";
 import type { Course } from "@/types/chat"; // Import Course from types/chat
+import { useAuth } from "@/contexts/auth-context";
+import { supabase } from "@/lib/supabase";
 
 export default function ProfessorInterface() {
+  const { user } = useAuth();
   const [currentView, setCurrentView] = useState<
     "dashboard" | "create-course" | "manage-course"
   >("dashboard");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-
-  // Mock courses data - professors might have multiple courses
   const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load courses for the logged-in professor
+  useEffect(() => {
+    const loadCourses = async () => {
+      if (!user?.id) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from("courses")
+          .select(
+            "id, code, name, files_count, quizzes_count, created_at, created_by"
+          )
+          .eq("created_by", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        const mapped: Course[] = (data || []).map((c: any) => ({
+          id: c.id,
+          code: c.code,
+          name: c.name,
+          semester: "",
+          year: new Date(c.created_at).getFullYear().toString(),
+          studentsCount: 0,
+          filesCount: c.files_count ?? 0,
+          quizzesCount: c.quizzes_count ?? 0,
+          createdDate: new Date(c.created_at).toISOString().split("T")[0],
+          lastModified: new Date(c.created_at).toISOString().split("T")[0],
+        }));
+
+        setCourses(mapped);
+      } catch (e: any) {
+        setError(e?.message || "Failed to load courses");
+        setCourses([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCourses();
+  }, [user?.id]);
 
   const handleCreateCourse = (
     newCourse: Omit<Course, "id" | "createdDate">
   ) => {
-    const course: Course = {
-      ...newCourse,
-      id: Date.now().toString(),
+    // Optimistic UI: add a temporary row, then refresh from DB
+    const temp: Course = {
+      id: `temp-${Date.now()}`,
       createdDate: new Date().toISOString().split("T")[0],
-      // Provide sensible defaults if not provided
-      semester: (newCourse as any).semester ?? "",
-      year: (newCourse as any).year ?? new Date().getFullYear().toString(),
-      studentsCount: (newCourse as any).studentsCount ?? 0,
+      semester: newCourse.semester ?? "",
+      year: newCourse.year ?? new Date().getFullYear().toString(),
+      studentsCount: newCourse.studentsCount ?? 0,
       lastModified:
-        (newCourse as any).lastModified ??
-        new Date().toISOString().split("T")[0],
+        newCourse.lastModified ?? new Date().toISOString().split("T")[0],
+      code: newCourse.code,
+      name: newCourse.name,
+      filesCount: newCourse.filesCount,
+      quizzesCount: newCourse.quizzesCount,
     };
-    setCourses((prev) => [course, ...prev]);
+    setCourses((prev) => [temp, ...prev]);
     setCurrentView("dashboard");
+    // Sync with server after creation completes
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("courses")
+          .select("id, code, name, files_count, quizzes_count, created_at")
+          .eq("created_by", user?.id)
+          .order("created_at", { ascending: false });
+        if (!error && data) {
+          const mapped: Course[] = data.map((c: any) => ({
+            id: c.id,
+            code: c.code,
+            name: c.name,
+            semester: "",
+            year: new Date(c.created_at).getFullYear().toString(),
+            studentsCount: 0,
+            filesCount: c.files_count ?? 0,
+            quizzesCount: c.quizzes_count ?? 0,
+            createdDate: new Date(c.created_at).toISOString().split("T")[0],
+            lastModified: new Date(c.created_at).toISOString().split("T")[0],
+          }));
+          setCourses(mapped);
+        }
+      } catch {}
+    })();
   };
 
   const handleManageCourse = (course: Course) => {
@@ -61,7 +133,19 @@ export default function ProfessorInterface() {
       <div className="flex-1 flex flex-col bg-background relative overflow-hidden z-0">
         {/* Content */}
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent p-6">
-          {courses.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center max-w-md">
+                <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-foreground mb-2">
+                  Loading your courses...
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  Please wait while we fetch your dashboard.
+                </p>
+              </div>
+            </div>
+          ) : courses.length === 0 ? (
             // Empty state for new professors
             <div className="flex items-center justify-center h-full">
               <div className="text-center max-w-md">
@@ -70,8 +154,9 @@ export default function ProfessorInterface() {
                   Welcome to EduChat Professor Dashboard
                 </h2>
                 <p className="text-muted-foreground mb-6">
-                  Get started by creating your first course. You can upload
-                  materials, create quizzes, and manage student interactions.
+                  {error
+                    ? `Error: ${error}`
+                    : "Get started by creating your first course. You can upload materials, create quizzes, and manage student interactions."}
                 </p>
                 <Button
                   onClick={() => setCurrentView("create-course")}

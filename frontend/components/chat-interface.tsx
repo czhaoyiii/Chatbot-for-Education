@@ -5,19 +5,24 @@ import type { Chat, Message } from "@/types/chat";
 import ThinkingIndicator from "./thinking-indicator";
 import MessageBubble from "./message-bubble";
 import { sendChatMessage } from "@/lib/chat-api";
+import { useAuth } from "@/contexts/auth-context";
 
 interface ChatInterfaceProps {
   chats: Chat[];
   selectedChat: Chat | null;
   onUpdateChat: (chatId: string, messages: Message[]) => void;
+  isLoadingHistory?: boolean;
 }
 
 export default function ChatInterface({
   chats,
   selectedChat,
   onUpdateChat,
+  isLoadingHistory = false,
 }: ChatInterfaceProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const [isThinking, setIsThinking] = useState(false);
   const messages = selectedChat?.messages || [];
@@ -50,7 +55,12 @@ export default function ChatInterface({
     try {
       // Call your backend API
       const startTime = Date.now();
-      const result = await sendChatMessage(content);
+      const result = await sendChatMessage(content, {
+        userId: user?.id,
+        userEmail: user?.email,
+        courseCode: selectedChat.module,
+        sessionId: sessionId || undefined,
+      });
       const endTime = Date.now();
       const thinkingTime = Math.ceil((endTime - startTime) / 1000);
 
@@ -58,17 +68,23 @@ export default function ChatInterface({
 
       // AI response
       if (result.success && result.response) {
+        if (result.session_id && !sessionId) {
+          setSessionId(result.session_id);
+          // Replace temp chat ID with persisted session ID in parent state
+          onUpdateChat(result.session_id, updatedMessages);
+          // Note: caller must ensure replacing the chat item ID in the list; we handle messages update here
+        }
         // Add AI response
         const aiMessage: Message = {
           id: `ai-${Date.now()}`,
           content: result.response,
           sender: "ai",
           timestamp: new Date(),
-          thinkingTime,
+          thinkingTime: result.thinking_time ?? thinkingTime,
         };
 
         const finalMessages = [...updatedMessages, aiMessage];
-        onUpdateChat(selectedChat.id, finalMessages);
+        onUpdateChat(result.session_id || selectedChat.id, finalMessages);
       } else {
         // Handle error case
         const errorMessage: Message = {
@@ -145,23 +161,30 @@ export default function ChatInterface({
       >
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center max-w-2xl px-4 animate-fade-in">
-              <div className="mb-6">
-                <Image
-                  src="/logo.png"
-                  alt="EduChat Logo"
-                  width={64}
-                  height={64}
-                  className="mx-auto mb-4 shadow-2xl rounded-full"
-                />
+            {isLoadingHistory ? (
+              <div className="text-center">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading...</p>
               </div>
-              <h1 className="text-4xl font-bold mb-4 text-foreground">
-                Welcome to {selectedChat.module}!
-              </h1>
-              <p className="text-xl text-muted-foreground leading-relaxed">
-                Ask me anything about {selectedChat.title.split(" - Chat")[0]}.
-              </p>
-            </div>
+            ) : (
+              <div className="text-center max-w-2xl px-4 animate-fade-in">
+                <div className="mb-6">
+                  <Image
+                    src="/logo.png"
+                    alt="EduChat Logo"
+                    width={64}
+                    height={64}
+                    className="mx-auto mb-4 shadow-2xl rounded-full"
+                  />
+                </div>
+                <h1 className="text-4xl font-bold mb-4 text-foreground">
+                  Welcome to {selectedChat.module}!
+                </h1>
+                <p className="text-xl text-muted-foreground leading-relaxed">
+                  Ask me anything about {selectedChat.title.split(" - Chat")[0]}.
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="max-w-4xl mx-auto">

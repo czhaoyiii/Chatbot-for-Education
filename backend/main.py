@@ -11,6 +11,12 @@ from agent import cpss_chat_expert, CPSSChatDeps
 from supabase.client import create_client
 from openai import AsyncOpenAI
 from user_management import login_user, UserLoginRequest
+from chat_management import (
+    chat_send as chat_send_service,
+    ChatSendRequest,
+    list_chat_sessions as list_chat_sessions_service,
+    list_session_messages as list_session_messages_service,
+)
 
 app = FastAPI()
 
@@ -122,4 +128,19 @@ async def create_course_route(
     return await create_course(
         code=code, name=name, user_email=user_email, files=files
     )
+
+
+@app.post("/chat/send")
+async def chat_send(payload: ChatSendRequest):
+    return await chat_send_service(payload)
+
+
+@app.get("/chat/sessions")
+async def list_chat_sessions(user_id: str | None = None, user_email: str | None = None):
+    return await list_chat_sessions_service(user_id=user_id, user_email=user_email)
+
+
+@app.get("/chat/sessions/{session_id}/messages")
+async def list_session_messages(session_id: str):
+    return await list_session_messages_service(session_id)
 
