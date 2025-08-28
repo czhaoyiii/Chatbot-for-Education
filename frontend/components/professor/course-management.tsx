@@ -10,6 +10,8 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { deleteCourseApi } from "@/lib/upload-api";
 import CourseFilesTab from "./course-files-tab";
 import CourseQuizzesTab from "./course-quizzes-tab";
 import CourseUploadTab from "./course-upload-tab";
@@ -19,23 +21,39 @@ interface CourseManagementProps {
   course: Course; // Use the imported Course type
   onBack: () => void;
   onUpdateCourse: (course: Course) => void; // Use the imported Course type
+  onDeleteCourse?: (courseId: string) => void; // optional callback to remove from list
 }
 
 export default function CourseManagement({
   course,
   onBack,
   onUpdateCourse,
+  onDeleteCourse,
 }: CourseManagementProps) {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "upload" | "files" | "quizzes" | "settings"
   >("files");
   const [showDeleteCourseDialog, setShowDeleteCourseDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDeleteCourse = () => {
-    // In a real app, this would delete the course from the database
-    console.log("Deleting course:", course.id);
-    setShowDeleteCourseDialog(false);
-    onBack(); // Go back to dashboard after deletion
+  const handleDeleteCourse = async () => {
+    if (!user?.email) return;
+    try {
+      setIsDeleting(true);
+      const res = await deleteCourseApi({
+        courseId: course.id,
+        userEmail: user.email,
+      });
+      if (!res.success) throw new Error((res as any).error || "Delete failed");
+      setShowDeleteCourseDialog(false);
+      onDeleteCourse?.(course.id);
+      onBack();
+    } catch (e) {
+      setShowDeleteCourseDialog(false);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleCancelDeleteCourse = () => {

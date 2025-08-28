@@ -127,6 +127,11 @@ export default function ProfessorInterface() {
     setSelectedCourse(updatedCourse);
   };
 
+  const handleDeleteCourse = (courseId: string) => {
+    setCourses((prev) => prev.filter((c) => c.id !== courseId));
+    setSelectedCourse(null);
+  };
+
   // Dashboard View
   if (currentView === "dashboard") {
     return (
@@ -269,6 +274,7 @@ export default function ProfessorInterface() {
         course={selectedCourse}
         onBack={handleBackToDashboard}
         onUpdateCourse={handleUpdateCourse}
+        onDeleteCourse={handleDeleteCourse}
       />
     );
   }

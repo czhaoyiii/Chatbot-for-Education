@@ -158,3 +158,30 @@ export async function uploadFilesToExistingCourse(params: {
     };
   }
 }
+
+export async function deleteCourseApi(params: {
+  courseId: string;
+  userEmail: string;
+}): Promise<{ success: boolean; message?: string } | UploadError> {
+  try {
+    const { courseId, userEmail } = params;
+    const formData = new FormData();
+    formData.append("user_email", userEmail);
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+    const response = await fetch(`${backendUrl}/courses/${courseId}/delete`, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || data.error || "Failed to delete course");
+    }
+    return data as { success: boolean; message?: string };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}

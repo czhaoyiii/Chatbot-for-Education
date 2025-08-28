@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from ingestion import files_upload
 from course_creation import create_course
-from course_management import upload_course_files, delete_course_file
+from course_management import upload_course_files, delete_course_file, delete_course
 from agent import cpss_chat_expert, CPSSChatDeps
 from supabase.client import create_client
 from openai import AsyncOpenAI
@@ -147,6 +147,14 @@ async def delete_course_file_route(
     user_email: str = Form(...),
 ):
     return await delete_course_file(course_id=course_id, course_file_id=course_file_id, user_email=user_email)
+
+
+@app.post("/courses/{course_id}/delete")
+async def delete_course_route(
+    course_id: str,
+    user_email: str = Form(...),
+):
+    return await delete_course(course_id=course_id, user_email=user_email)
 
 
 @app.post("/chat/send")

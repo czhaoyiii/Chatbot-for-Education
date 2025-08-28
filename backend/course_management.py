@@ -40,7 +40,8 @@ async def upload_course_files(
             supabase_client.table("courses").select("id, created_by").eq("id", course_id).execute()
         )
         if not course_res.data:
-            raise HTTPException(status_code=404, detail="Course not found")
+            # Already deleted or never existed; treat as idempotent success
+            return {"success": True, "message": "Course already deleted"}
 
         # Prepare temp dir
         temp_dir = Path(tempfile.mkdtemp())
@@ -193,3 +194,74 @@ async def delete_course_file(*, course_id: str, course_file_id: str, user_email:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting course file: {str(e)}")
+
+
+async def delete_course(*, course_id: str, user_email: str):
+    """
+    Delete an entire course and its related data:
+    - Verifies the user owns the course
+    - Deletes ingested_documents for the course
+    - Deletes course_files rows for the course
+    - Deletes the course row
+    """
+    try:
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"]
+        )
+
+        # Resolve user
+        user_res = (
+            supabase_client.table("users").select("id").eq("email", user_email).execute()
+        )
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="User not found for provided email")
+        user_id = user_res.data[0]["id"]
+
+        # Ensure course exists and is owned by user
+        course_res = (
+            supabase_client.table("courses").select("id, created_by").eq("id", course_id).execute()
+        )
+        if not course_res.data:
+            raise HTTPException(status_code=404, detail="Course not found")
+        if course_res.data[0]["created_by"] != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this course")
+
+        # Delete ingested documents associated with the course
+        try:
+            supabase_client.table("ingested_documents").delete().eq("course_id", course_id).execute()
+        except Exception:
+            pass
+
+        # Delete chat messages and sessions related to this course (child first)
+        try:
+            sessions_res = (
+                supabase_client.table("chat_sessions").select("id").eq("course_id", course_id).execute()
+            )
+            session_ids = [row["id"] for row in (sessions_res.data or [])]
+            if session_ids:
+                supabase_client.table("chat_messages").delete().in_("session_id", session_ids).execute()
+            supabase_client.table("chat_sessions").delete().eq("course_id", course_id).execute()
+        except Exception:
+            pass
+
+        # Delete course files for the course
+        try:
+            supabase_client.table("course_files").delete().eq("course_id", course_id).execute()
+        except Exception:
+            pass
+
+        # Optional: delete quizzes and sessions if present (best-effort, ignore if tables don't exist)
+        try:
+            supabase_client.table("quizzes").delete().eq("course_id", course_id).execute()
+        except Exception:
+            pass
+
+        # Finally, delete the course
+        supabase_client.table("courses").delete().eq("id", course_id).execute()
+
+        return {"success": True, "message": "Course deleted"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting course: {str(e)}")
