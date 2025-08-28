@@ -172,7 +172,7 @@ export default function Sidebar({
           <div className="px-3 flex-shrink-0">
             <Button
               variant="ghost"
-              className="w-full justify-start text-foreground border-border transition-all duration-200"
+              className="w-full justify-start text-foreground border-border transition-all duration-200 group"
               tabIndex={isOpen ? 0 : -1}
               onClick={handleNewChat}
             >
@@ -181,7 +181,7 @@ export default function Sidebar({
             </Button>
             <Button
               variant="ghost"
-              className="w-full justify-start text-foreground border-border transition-all duration-200"
+              className="w-full justify-start text-foreground border-border transition-all duration-200 group"
               tabIndex={isOpen ? 0 : -1}
             >
               <ClipboardList className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" />
@@ -206,10 +206,10 @@ export default function Sidebar({
                   <Button
                     key={chat.id}
                     variant="ghost"
-                    className={`w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group text-foreground hover:bg-accent hover:text-foreground ${
+                    className={`w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group ${
                       selectedChatId === chat.id
-                        ? "bg-accent text-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        ? "bg-hover-accent text-foreground"
+                        : "text-muted-foreground hover:bg-hover-accent hover:text-foreground"
                     }`}
                     tabIndex={isOpen ? 0 : -1}
                     onClick={() => handleSelectChat(chat.id)}

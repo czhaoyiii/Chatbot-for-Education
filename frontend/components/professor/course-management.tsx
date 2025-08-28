@@ -72,7 +72,7 @@ export default function CourseManagement({
                 size="sm"
                 onClick={() => setActiveTab("files")}
                 className={
-                  activeTab === "files" ? "bg-foreground text-background" : ""
+                  activeTab === "files" ? "bg-prof-foreground text-background hover:bg-chart-1" : ""
                 }
               >
                 <FileText className="w-4 h-4 mr-2" />
@@ -83,7 +83,7 @@ export default function CourseManagement({
                 size="sm"
                 onClick={() => setActiveTab("upload")}
                 className={
-                  activeTab === "upload" ? "bg-foreground text-background" : ""
+                  activeTab === "upload" ? "bg-prof-foreground text-background hover:bg-chart-1" : ""
                 }
               >
                 <Upload className="w-4 h-4 mr-2" />
@@ -94,7 +94,7 @@ export default function CourseManagement({
                 size="sm"
                 onClick={() => setActiveTab("quizzes")}
                 className={
-                  activeTab === "quizzes" ? "bg-foreground text-background" : ""
+                  activeTab === "quizzes" ? "bg-prof-foreground text-background hover:bg-chart-1" : ""
                 }
               >
                 <ClipboardList className="w-4 h-4 mr-2" />
@@ -106,7 +106,7 @@ export default function CourseManagement({
                 onClick={() => setActiveTab("settings")}
                 className={
                   activeTab === "settings"
-                    ? "bg-foreground text-background"
+                    ? "bg-prof-foreground text-background hover:bg-chart-1"
                     : ""
                 }
               >

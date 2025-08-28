@@ -136,11 +136,11 @@ export default function Header({
         <div className="relative" ref={dropdownRef}>
           <Button
             variant="ghost"
-            className="flex items-center space-x-2 hover:bg-accent transition-all duration-200 rounded-lg p-2"
+            className="h-11 flex items-center space-x-2 hover:bg-accent transition-all duration-200 rounded-lg p-2"
             onClick={() => setDropdownOpen(!dropdownOpen)}
           >
             <div
-              className={`w-8 h-8 bg-gradient-to-br ${getAvatarColor()} rounded-full flex items-center justify-center text-sm font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105`}
+              className={`w-9 h-9 bg-gradient-to-br ${getAvatarColor()} rounded-full flex items-center justify-center text-sm font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105`}
             >
               {user?.name?.slice(0, 2).toUpperCase() || "ZY"}
             </div>
@@ -179,14 +179,6 @@ export default function Header({
                     </Button>
                   </Link>
                 )}
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-200 px-4 py-2 rounded-none"
-                  onClick={() => setDropdownOpen(false)}
-                >
-                  <Settings className="w-4 h-4 mr-3" />
-                  Settings
-                </Button>
 
                 <Button
                   variant="ghost"
