@@ -2,8 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Trash2, Upload, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Course } from "@/types/chat"; // Import Course from types/chat
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/auth-context";
 
 interface UploadedFile {
   id: string;
@@ -26,9 +28,11 @@ export default function CourseFilesTab({
   onNavigateToUpload,
   onBack,
 }: CourseFilesTabProps) {
-  // Mock files for this specific course
+  const { user } = useAuth();
+  // Files for this specific course
   const [files, setFiles] = useState<UploadedFile[]>([]);
-
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<UploadedFile | null>(null);
 
@@ -51,19 +55,87 @@ export default function CourseFilesTab({
   };
 
   const handleConfirmDelete = () => {
-    if (fileToDelete) {
-      setFiles((prev) => prev.filter((file) => file.id !== fileToDelete.id));
-      const updatedCourse = { ...course, filesCount: course.filesCount - 1 };
-      onUpdateCourse(updatedCourse);
-      setShowDeleteDialog(false);
-      setFileToDelete(null);
-    }
+    const doDelete = async () => {
+      try {
+        // Prefer backend to handle delete + recount for consistency and RLS-safe operations
+        const backendUrl =
+          process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+        if (!user?.email) throw new Error("Not logged in");
+        const formData = new FormData();
+        formData.append("user_email", user.email);
+        const resp = await fetch(
+          `${backendUrl}/courses/${course.id}/files/${fileToDelete?.id}/delete`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+        const payload = await resp.json();
+        if (!resp.ok)
+          throw new Error(payload?.detail || payload?.error || "Delete failed");
+        setFiles((prev) => prev.filter((f) => f.id !== fileToDelete?.id));
+        const newCount: number | undefined = payload?.new_files_count;
+        const updatedCourse = {
+          ...course,
+          filesCount:
+            typeof newCount === "number"
+              ? newCount
+              : Math.max(0, course.filesCount - 1),
+        };
+        onUpdateCourse(updatedCourse);
+      } catch (e) {
+        // best-effort inline error
+        setError("Failed to delete file. Please try again.");
+      } finally {
+        setShowDeleteDialog(false);
+        setFileToDelete(null);
+      }
+    };
+    void doDelete();
   };
 
   const handleCancelDelete = () => {
     setShowDeleteDialog(false);
     setFileToDelete(null);
   };
+
+  const detectType = (filename: string): UploadedFile["type"] => {
+    const lower = filename.toLowerCase();
+    if (lower.endsWith(".pdf")) return "pdf";
+    if (lower.endsWith(".doc") || lower.endsWith(".docx")) return "doc";
+    if (lower.endsWith(".ppt") || lower.endsWith(".pptx")) return "ppt";
+    return "txt";
+  };
+
+  useEffect(() => {
+    const loadFiles = async () => {
+      if (!course?.id) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from("course_files")
+          .select("id, filename, uploaded_at")
+          .eq("course_id", course.id)
+          .order("uploaded_at", { ascending: false });
+        if (error) throw error;
+        const mapped: UploadedFile[] = (data || []).map((row: any) => ({
+          id: row.id,
+          name: row.filename,
+          size: "-",
+          uploadDate: new Date(row.uploaded_at).toLocaleString(),
+          type: detectType(row.filename),
+        }));
+        setFiles(mapped);
+      } catch (e: any) {
+        setError(e?.message || "Failed to load files");
+        setFiles([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void loadFiles();
+  }, [course?.id]);
 
   return (
     <>
@@ -100,7 +172,16 @@ export default function CourseFilesTab({
             </Button>
           </div>
 
-          {files.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading files...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-sm text-red-500">{error}</p>
+            </div>
+          ) : files.length === 0 ? (
             <div className="text-center py-12">
               <Upload className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">

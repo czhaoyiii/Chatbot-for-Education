@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Upload, Trash2, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { useState, useRef } from "react";
 import type { Course } from "@/types/chat";
-import { uploadFiles } from "@/lib/upload-api";
+import { uploadFilesToExistingCourse } from "@/lib/upload-api";
+import { useAuth } from "@/contexts/auth-context";
 
 interface CourseUploadTabProps {
   course: Course;
@@ -17,6 +18,7 @@ export default function CourseUploadTab({
   course,
   onUpdateCourse,
 }: CourseUploadTabProps) {
+  const { user } = useAuth();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -102,19 +104,28 @@ export default function CourseUploadTab({
       return;
     }
 
+    if (!user?.email) {
+      setUploadStatus("error");
+      setUploadMessage("You're not logged in. Please log in and try again.");
+      return;
+    }
+
     setIsUploading(true);
     setUploadStatus("uploading");
     setUploadMessage("Uploading files...");
 
     try {
-      const result = await uploadFiles(selectedFiles);
+      const result = await uploadFilesToExistingCourse({
+        courseId: course.id,
+        userEmail: user.email,
+        files: selectedFiles,
+      });
 
       if (result.success) {
-        const newFilesCount = course.filesCount + selectedFiles.length;
         const updatedCourse = {
           ...course,
-          filesCount: newFilesCount,
-        };
+          filesCount: result.course.files_count ?? course.filesCount,
+        } as Course;
         onUpdateCourse(updatedCourse);
         setSelectedFiles([]);
         setUploadStatus("success");
@@ -127,7 +138,8 @@ export default function CourseUploadTab({
         }, 5000);
       } else {
         setUploadStatus("error");
-        setUploadMessage(result.error || "Failed to upload files.");
+        const err = (result as any).error as string | undefined;
+        setUploadMessage(err || "Failed to upload files.");
       }
     } catch (error) {
       setUploadStatus("error");
