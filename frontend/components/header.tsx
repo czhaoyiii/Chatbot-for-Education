@@ -73,9 +73,9 @@ export default function Header({
   };
 
   const getDisplayTitle = () => {
-    if (variant === "professor") {
-      return title || "Professor Dashboard";
-    }
+    // Prefer explicit title override when provided
+    if (title) return title;
+    if (variant === "professor") return "Professor Dashboard";
     return getModuleInfo(selectedChat ?? null) || "EduChat";
   };
 
@@ -115,7 +115,9 @@ export default function Header({
         {/* Module name in center on mobile */}
         <div className="md:hidden">
           <span className="text-sm font-medium text-foreground">
-            {variant === "chat"
+            {title
+              ? title
+              : variant === "chat"
               ? selectedChat
                 ? selectedChat.module
                 : "EduChat"

@@ -4,6 +4,8 @@ import { MessageSquarePlus, ClipboardList, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Chat, Module } from "@/types/chat";
 import ModuleSelection from "./model-selection";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -23,6 +25,8 @@ export default function Sidebar({
   setSelectedChatId,
 }: SidebarProps) {
   const [showModuleDialog, setShowModuleDialog] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
@@ -89,10 +93,16 @@ export default function Sidebar({
       const withoutEphemeral = prev.filter((c) => !c.id.startsWith("temp-"));
       return [newChat, ...withoutEphemeral];
     });
+
+    // Ensure we are on the chat page to view the new conversation
+    router.push("/chat");
   };
 
   const handleSelectChat = (chatId: string) => {
     setSelectedChatId(chatId);
+    if (pathname?.startsWith("/quiz")) {
+      router.push("/chat");
+    }
   };
 
   return (
@@ -179,14 +189,21 @@ export default function Sidebar({
               <MessageSquarePlus className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" />
               New chat
             </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-foreground border-border transition-all duration-200 group"
-              tabIndex={isOpen ? 0 : -1}
-            >
-              <ClipboardList className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" />
-              Quiz
-            </Button>
+            <Link href="/quiz" className="block">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-foreground border-border transition-all duration-200 group"
+                tabIndex={isOpen ? 0 : -1}
+                onClick={() => {
+                  // Unselect current chat and navigate to quiz
+                  setSelectedChatId(null);
+                  if (window.innerWidth < 768) onToggle();
+                }}
+              >
+                <ClipboardList className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" />
+                Quiz
+              </Button>
+            </Link>
           </div>
 
           {/* Chat History - Scrollable */}
