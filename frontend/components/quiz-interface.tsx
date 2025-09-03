@@ -186,12 +186,12 @@ export default function QuizInterface({
               {/* Back Button */}
               {onBack && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   onClick={onBack}
-                  className="w-full mt-4 text-gray-400 hover:text-white hover:bg-gray-700"
+                  className="w-full mt-4 bg-transparent text-foreground"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Chat
+                  Back to Chats
                 </Button>
               )}
             </div>
@@ -271,9 +271,9 @@ export default function QuizInterface({
                     </Button>
                     {onBack && (
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         onClick={onBack}
-                        className="w-full"
+                        className="w-full bg-transparent text-foreground"
                       >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back to Chat
@@ -344,11 +344,11 @@ export default function QuizInterface({
                   className={`w-full text-left justify-start p-4 h-auto transition-all duration-200 text-foreground ${
                     selectedAnswer === option.key
                       ? option.key === currentQuestion.correctAnswer
-                        ? "border-green-500 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300"
-                        : "border-red-500 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300"
+                        ? "border-green-500 dark:border-green-500 bg-green-50 dark:bg-green-950 text-green-500 dark:text-green-300 disabled:opacity-100"
+                        : "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-950 text-red-500 dark:text-red-300 disabled:opacity-100"
                       : showResult &&
                         option.key === currentQuestion.correctAnswer
-                      ? "border-green-500 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300"
+                      ? "border-green-500 dark:border-green-500 bg-green-50 dark:bg-green-950 text-green-500 dark:text-green-300 disabled:opacity-100"
                       : "hover:bg-accent"
                   }`}
                   onClick={() => handleAnswerSelect(option.key)}
