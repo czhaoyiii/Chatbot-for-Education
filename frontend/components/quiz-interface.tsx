@@ -86,12 +86,18 @@ export default function QuizInterface({
   };
 
   const handleRestartQuiz = () => {
-    setQuizState("setup");
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setShowResult(false);
     setScore(0);
-    setQuestions([]);
+    // Immediately start the quiz for the selected module
+    const moduleQuestions =
+      quizMode === "all"
+        ? getQuestionsByModule(selectedModule)
+        : getRandomQuestions(selectedModule, 5);
+    if (moduleQuestions.length === 0) return;
+    setQuestions(moduleQuestions);
+    setQuizState("active");
   };
 
   const handleBackToSetup = () => {

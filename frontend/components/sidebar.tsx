@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { MessageSquarePlus, ClipboardList, X } from "lucide-react";
+import { MessageSquarePlus, ClipboardList, Trash2, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import type { Chat, Module } from "@/types/chat";
 import ModuleSelection from "./model-selection";
@@ -25,6 +26,8 @@ export default function Sidebar({
   setSelectedChatId,
 }: SidebarProps) {
   const [showModuleDialog, setShowModuleDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<Chat | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -164,7 +167,7 @@ export default function Sidebar({
               className="text-muted-foreground hover:text-foreground"
               tabIndex={isOpen ? 0 : -1}
             >
-              <X className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
 
@@ -220,26 +223,111 @@ export default function Sidebar({
                 </div>
               ) : (
                 chats.map((chat) => (
-                  <Button
+                  <div
                     key={chat.id}
-                    variant="ghost"
-                    className={`w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group ${
-                      selectedChatId === chat.id
-                        ? "bg-hover-accent text-foreground"
-                        : "text-muted-foreground hover:bg-hover-accent hover:text-foreground"
-                    }`}
-                    tabIndex={isOpen ? 0 : -1}
-                    onClick={() => handleSelectChat(chat.id)}
+                    className={`relative flex items-center group`}
                   >
-                    <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
-                      {chat.title}
-                    </span>
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      className={`w-full justify-start text-left px-3 h-auto flex-shrink-0 transition-all duration-200 rounded-lg group-hover:bg-hover-accent group-hover:text-foreground ${
+                        selectedChatId === chat.id
+                          ? "bg-hover-accent text-foreground"
+                          : "text-muted-foreground hover:bg-hover-accent hover:text-foreground"
+                      }`}
+                      tabIndex={isOpen ? 0 : -1}
+                      onClick={() => handleSelectChat(chat.id)}
+                    >
+                      <span className="text-sm group-hover:text-foreground transition-colors duration-200 leading-relaxed whitespace-normal text-left">
+                        {chat.title}
+                      </span>
+                    </Button>
+                    <button
+                      className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                      title="Delete chat"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setChatToDelete(chat);
+                        setShowDeleteDialog(true);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive hover:text-red-600" />
+                    </button>
+                  </div>
                 ))
               )}
             </div>
           </div>
         </div>
+
+        {/* Delete Chat Confirmation Dialog (Portal) */}
+        {showDeleteDialog &&
+          typeof window !== "undefined" &&
+          createPortal(
+            <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+              <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold text-foreground">
+                      Delete Chat Session
+                    </h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowDeleteDialog(false);
+                        setChatToDelete(null);
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <p className="text-muted-foreground mb-6">
+                    Are you sure you want to delete "{chatToDelete?.title}"?
+                    This action cannot be undone.
+                  </p>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1 bg-transparent"
+                      onClick={() => {
+                        setShowDeleteDialog(false);
+                        setChatToDelete(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                      onClick={async () => {
+                        if (chatToDelete) {
+                          setChats((prev) =>
+                            prev.filter((c) => c.id !== chatToDelete.id)
+                          );
+                          if (!chatToDelete.id.startsWith("temp-")) {
+                            const { deleteChatSession } = await import(
+                              "@/lib/chat-api"
+                            );
+                            await deleteChatSession(chatToDelete.id);
+                          }
+                          if (selectedChatId === chatToDelete.id) {
+                            setSelectedChatId(null);
+                          }
+                        }
+                        setShowDeleteDialog(false);
+                        setChatToDelete(null);
+                      }}
+                    >
+                      Delete Chat
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
       </div>
     </>
   );

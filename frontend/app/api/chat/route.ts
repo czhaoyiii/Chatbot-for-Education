@@ -47,3 +47,31 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Handles DELETE /api/chat?sessions=[sessionId]
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const sessionId = searchParams.get("sessions");
+  if (!sessionId) {
+    return NextResponse.json({ error: "Session ID required" }, { status: 400 });
+  }
+
+  const backendUrl =
+    process.env.BACKEND_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    "http://localhost:8000";
+
+  const resp = await fetch(`${backendUrl}/chat/sessions/${sessionId}`, {
+    method: "DELETE",
+  });
+
+  const data = await resp.json();
+  if (!resp.ok) {
+    return NextResponse.json(
+      { error: data.error || "Failed to delete session" },
+      { status: resp.status }
+    );
+  }
+
+  return NextResponse.json({ success: true });
+}

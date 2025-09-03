@@ -171,3 +171,22 @@ async def list_chat_sessions(user_id: str | None = None, user_email: str | None 
 async def list_session_messages(session_id: str):
     return await list_session_messages_service(session_id)
 
+# DELETE chat session endpoint
+@app.delete("/chat/sessions/{session_id}")
+async def delete_chat_session(session_id: str):
+    """
+    Delete a chat session and its messages.
+    """
+    try:
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"]
+        )
+        # Delete messages first
+        supabase_client.table("chat_messages").delete().eq("session_id", session_id).execute()
+        # Delete session
+        supabase_client.table("chat_sessions").delete().eq("id", session_id).execute()
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete session: {str(e)}")
+

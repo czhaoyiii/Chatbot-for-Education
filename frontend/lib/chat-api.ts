@@ -96,3 +96,16 @@ export async function fetchSessionMessages(
     createdAt: m.created_at,
   }));
 }
+
+export async function deleteChatSession(
+  sessionId: string
+): Promise<{ success: boolean; error?: string }> {
+  const resp = await fetch(`/api/chat?sessions=${sessionId}`, {
+    method: "DELETE",
+  });
+  const data = await resp.json();
+  if (!resp.ok) {
+    return { success: false, error: data.error || "Failed to delete session" };
+  }
+  return { success: true };
+}
