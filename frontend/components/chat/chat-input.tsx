@@ -1,5 +1,5 @@
 import { ArrowUp, Plus } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import { useEffect, useRef, useState } from "react";
 import type { Chat } from "@/types/chat";
 import { getModuleInfo } from "@/lib/utils";

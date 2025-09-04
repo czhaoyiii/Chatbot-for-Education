@@ -1,7 +1,7 @@
 "use client";
 
 import Header from "@/components/header";
-import ProfessorInterface from "@/components/professor-interface";
+import ProfessorInterface from "@/components/professor/professor-interface";
 import ProtectedRoute from "@/components/protected-route";
 
 export default function ProfPage() {

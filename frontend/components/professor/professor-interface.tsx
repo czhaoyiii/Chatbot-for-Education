@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, BookOpen, FileText, ClipboardList } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import CreateCourseForm from "./professor/create-course-form";
-import CourseManagement from "./professor/course-management";
+import CreateCourseForm from "./create-course-form";
+import CourseManagement from "./course-management";
 import type { Course } from "@/types/chat"; // Import Course from types/chat
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/lib/supabase";

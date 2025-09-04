@@ -1,6 +1,6 @@
 "use client";
 
-import ChatInterface from "@/components/chat-interface";
+import ChatInterface from "@/components/chat/chat-interface";
 import { useChatLayout } from "../layout";
 
 export default function ChatPage() {
