@@ -8,7 +8,6 @@ import {
   XCircle,
   RotateCcw,
   Trophy,
-  BookOpen,
   ArrowLeft,
   ChevronDown,
 } from "lucide-react";
@@ -16,6 +15,7 @@ import {
   getQuestionsByModule,
   getRandomQuestions,
   getAllModules,
+  getTopicsByModule,
   type QuizQuestion,
 } from "@/data/quiz-questions";
 import Image from "next/image";
@@ -35,6 +35,8 @@ export default function QuizInterface({
   const [selectedModule, setSelectedModule] = useState<string>(
     currentModule || ""
   );
+  const [topicDropdownOpen, setTopicDropdownOpen] = useState(false)
+  const [selectedTopic, setSelectedTopic] = useState<string>("")
   const [quizMode, setQuizMode] = useState<QuizMode>("random5");
   const [quizState, setQuizState] = useState<QuizState>("setup");
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -45,6 +47,7 @@ export default function QuizInterface({
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const modules = getAllModules();
+  const availableTopics = selectedModule ? getTopicsByModule(selectedModule) : []
 
   const handleStartQuiz = () => {
     if (!selectedModule) return;
@@ -167,16 +170,34 @@ export default function QuizInterface({
                 )}
               </div>
 
-              {/* Quiz Info */}
+              {/* Topic Selection */}
               {selectedModule && (
-                <div className="space-y-3 mb-8">
-                  <div className="flex items-center justify-center text-muted-foreground">
-                    <BookOpen className="w-5 h-5 mr-3" />
-                    <span>
-                      {getQuestionCount()} question
-                      {getQuestionCount() > 1 ? "s" : ""} available
-                    </span>
-                  </div>
+                <div className="relative mb-8">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between h-12 text-base bg-transparent"
+                    onClick={() => setTopicDropdownOpen(!topicDropdownOpen)}
+                  >
+                    {selectedTopic || "Choose a topic..."}
+                    <ChevronDown className="w-5 h-5 ml-2" />
+                  </Button>
+
+                  {topicDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-10 max-h-50 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-gray-700">
+                      {availableTopics.map((topic) => (
+                        <button
+                          key={topic}
+                          className="w-full text-left px-4 py-3 hover:bg-accent transition-colors duration-200 first:rounded-t-md last:rounded-b-md"
+                          onClick={() => {
+                            setSelectedTopic(topic)
+                            setTopicDropdownOpen(false)
+                          }}
+                        >
+                          {topic}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -1,15 +1,25 @@
 export interface QuizQuestion {
-  id: string;
-  courseId: string;
-  courseCode: string;
-  courseName: string;
-  questionText: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
-  correctAnswer: "A" | "B" | "C" | "D";
-  explanation: string;
+  id: string
+  courseId: string
+  courseCode: string
+  courseName: string
+  topic: string
+  questionText: string
+  optionA: string
+  optionB: string
+  optionC: string
+  optionD: string
+  correctAnswer: "A" | "B" | "C" | "D"
+  explanation: string
+}
+
+export const MODULE_TOPICS = {
+  CZ4070: ["Lecture 1: Introduction to CTI", "Lecture 2: Threat Indicators", "Lecture 3: MITRE ATT&CK"],
+  CZ4022: ["Lecture 1: Wireless Fundamentals", "Lecture 2: Mobile Networks", "Lecture 3: Advanced Technologies"],
+  CZ4055: ["Lecture 1: CPS Overview", "Lecture 2: Industrial Security", "Lecture 3: IoT Security"],
+  CZ4046: ["Lecture 1: Agent Basics", "Lecture 2: Search Algorithms", "Lecture 3: Multi-Agent Systems"],
+  CZ2006: ["Lecture 1: SOLID Principles", "Lecture 2: Agile & Testing", "Lecture 3: Design Patterns"],
+  CZ2069: ["Lecture 1: Software Basics"],
 }
 
 export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
@@ -19,11 +29,10 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4070",
     courseCode: "CZ4070",
     courseName: "Cyber Threat Intelligence",
-    questionText:
-      "What is the primary purpose of threat intelligence in cybersecurity?",
+    topic: "Lecture 1: Introduction to CTI",
+    questionText: "What is the primary purpose of threat intelligence in cybersecurity?",
     optionA: "To encrypt sensitive data",
-    optionB:
-      "To provide actionable insights about current and emerging security threats",
+    optionB: "To provide actionable insights about current and emerging security threats",
     optionC: "To manage user access controls",
     optionD: "To backup critical systems",
     correctAnswer: "B",
@@ -35,8 +44,8 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4070",
     courseCode: "CZ4070",
     courseName: "Cyber Threat Intelligence",
-    questionText:
-      "Which of the following is an example of an Indicator of Compromise (IoC)?",
+    topic: "Lecture 2: Threat Indicators",
+    questionText: "Which of the following is an example of an Indicator of Compromise (IoC)?",
     optionA: "A company's security policy",
     optionB: "A suspicious IP address communicating with malware",
     optionC: "The number of employees in IT department",
@@ -50,10 +59,10 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4070",
     courseCode: "CZ4070",
     courseName: "Cyber Threat Intelligence",
+    topic: "Lecture 3: MITRE ATT&CK",
     questionText: "What does the MITRE ATT&CK framework primarily provide?",
     optionA: "Encryption algorithms for data protection",
-    optionB:
-      "A knowledge base of adversary tactics, techniques, and procedures",
+    optionB: "A knowledge base of adversary tactics, techniques, and procedures",
     optionC: "Network topology designs",
     optionD: "User authentication methods",
     correctAnswer: "B",
@@ -65,10 +74,10 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4070",
     courseCode: "CZ4070",
     courseName: "Cyber Threat Intelligence",
+    topic: "Lecture 1: Introduction to CTI",
     questionText: "In threat hunting, what is the primary goal?",
     optionA: "To wait for security alerts to trigger",
-    optionB:
-      "To proactively search for threats that have evaded existing security measures",
+    optionB: "To proactively search for threats that have evaded existing security measures",
     optionC: "To update antivirus signatures",
     optionD: "To configure firewall rules",
     correctAnswer: "B",
@@ -80,6 +89,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4070",
     courseCode: "CZ4070",
     courseName: "Cyber Threat Intelligence",
+    topic: "Lecture 2: Threat Indicators",
     questionText: "What is STIX in the context of threat intelligence?",
     optionA: "A type of malware",
     optionB: "A structured language for describing cyber threat information",
@@ -94,6 +104,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4070",
     courseCode: "CZ4070",
     courseName: "Cyber Threat Intelligence",
+    topic: "Lecture 2: Threat Indicators",
     questionText: "What is TAXII used for in threat intelligence sharing?",
     optionA: "Encrypting threat data",
     optionB: "Transporting and sharing threat intelligence information",
@@ -110,8 +121,8 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4022",
     courseCode: "CZ4022",
     courseName: "Wireless & Mobile Networks",
-    questionText:
-      "Which frequency band is commonly used by Wi-Fi 802.11n networks?",
+    topic: "Lecture 1: Wireless Fundamentals",
+    questionText: "Which frequency band is commonly used by Wi-Fi 802.11n networks?",
     optionA: "900 MHz only",
     optionB: "2.4 GHz only",
     optionC: "Both 2.4 GHz and 5 GHz",
@@ -125,10 +136,10 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4022",
     courseCode: "CZ4022",
     courseName: "Wireless & Mobile Networks",
+    topic: "Lecture 2: Mobile Networks",
     questionText: "What is the primary purpose of handoff in mobile networks?",
     optionA: "To encrypt data transmission",
-    optionB:
-      "To maintain connectivity as a mobile device moves between cell towers",
+    optionB: "To maintain connectivity as a mobile device moves between cell towers",
     optionC: "To compress voice data",
     optionD: "To authenticate users",
     correctAnswer: "B",
@@ -140,6 +151,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4022",
     courseCode: "CZ4022",
     courseName: "Wireless & Mobile Networks",
+    topic: "Lecture 3: Advanced Technologies",
     questionText: "What does MIMO stand for in wireless communications?",
     optionA: "Multiple Input, Multiple Output",
     optionB: "Mobile Internet, Mobile Operations",
@@ -154,8 +166,8 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4022",
     courseCode: "CZ4022",
     courseName: "Wireless & Mobile Networks",
-    questionText:
-      "Which generation of mobile networks introduced packet-switched data transmission?",
+    topic: "Lecture 2: Mobile Networks",
+    questionText: "Which generation of mobile networks introduced packet-switched data transmission?",
     optionA: "1G",
     optionB: "2G",
     optionC: "3G",
@@ -169,6 +181,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4022",
     courseCode: "CZ4022",
     courseName: "Wireless & Mobile Networks",
+    topic: "Lecture 3: Advanced Technologies",
     questionText: "What is a key advantage of 5G networks over 4G?",
     optionA: "Lower frequency bands only",
     optionB: "Significantly lower latency and higher data rates",
@@ -183,6 +196,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4022",
     courseCode: "CZ4022",
     courseName: "Wireless & Mobile Networks",
+    topic: "Lecture 1: Wireless Fundamentals",
     questionText: "In Wi-Fi networks, what is the purpose of CSMA/CA?",
     optionA: "To encrypt wireless data",
     optionB: "To avoid collisions in wireless medium access",
@@ -199,6 +213,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4055",
     courseCode: "CZ4055",
     courseName: "Cyber Physical System Security",
+    topic: "Lecture 1: CPS Overview",
     questionText: "What characterizes a Cyber-Physical System (CPS)?",
     optionA: "Only software components",
     optionB: "Integration of computational and physical processes",
@@ -213,8 +228,8 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4055",
     courseCode: "CZ4055",
     courseName: "Cyber Physical System Security",
-    questionText:
-      "Which of the following is a common security challenge in Industrial Control Systems (ICS)?",
+    topic: "Lecture 2: Industrial Security",
+    questionText: "Which of the following is a common security challenge in Industrial Control Systems (ICS)?",
     optionA: "Too much encryption",
     optionB: "Legacy systems with limited security features",
     optionC: "Excessive user authentication",
@@ -228,6 +243,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4055",
     courseCode: "CZ4055",
     courseName: "Cyber Physical System Security",
+    topic: "Lecture 2: Industrial Security",
     questionText: "What does SCADA stand for in industrial systems?",
     optionA: "Secure Control And Data Acquisition",
     optionB: "Supervisory Control And Data Acquisition",
@@ -242,8 +258,8 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4055",
     courseCode: "CZ4055",
     courseName: "Cyber Physical System Security",
-    questionText:
-      "Which protocol is commonly used in industrial automation for communication between devices?",
+    topic: "Lecture 2: Industrial Security",
+    questionText: "Which protocol is commonly used in industrial automation for communication between devices?",
     optionA: "HTTP",
     optionB: "SMTP",
     optionC: "Modbus",
@@ -257,6 +273,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4055",
     courseCode: "CZ4055",
     courseName: "Cyber Physical System Security",
+    topic: "Lecture 3: IoT Security",
     questionText: "What is a major security concern with IoT devices in CPS?",
     optionA: "Too much processing power",
     optionB: "Weak authentication and default credentials",
@@ -271,8 +288,8 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4055",
     courseCode: "CZ4055",
     courseName: "Cyber Physical System Security",
-    questionText:
-      "What is the primary goal of air-gapping in critical infrastructure?",
+    topic: "Lecture 1: CPS Overview",
+    questionText: "What is the primary goal of air-gapping in critical infrastructure?",
     optionA: "To improve system performance",
     optionB: "To physically isolate critical systems from external networks",
     optionC: "To reduce power consumption",
@@ -288,10 +305,10 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4046",
     courseCode: "CZ4046",
     courseName: "Intelligent Agents",
+    topic: "Lecture 1: Agent Basics",
     questionText: "What is a key characteristic of an intelligent agent?",
     optionA: "It only responds to direct commands",
-    optionB:
-      "It can perceive its environment and act autonomously to achieve goals",
+    optionB: "It can perceive its environment and act autonomously to achieve goals",
     optionC: "It requires constant human supervision",
     optionD: "It only processes text data",
     correctAnswer: "B",
@@ -303,8 +320,8 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4046",
     courseCode: "CZ4046",
     courseName: "Intelligent Agents",
-    questionText:
-      "In the A* search algorithm, what does the heuristic function h(n) represent?",
+    topic: "Lecture 2: Search Algorithms",
+    questionText: "In the A* search algorithm, what does the heuristic function h(n) represent?",
     optionA: "The exact cost from start to node n",
     optionB: "The estimated cost from node n to the goal",
     optionC: "The total path cost",
@@ -318,11 +335,10 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4046",
     courseCode: "CZ4046",
     courseName: "Intelligent Agents",
-    questionText:
-      "What is the main advantage of reinforcement learning over supervised learning?",
+    topic: "Lecture 1: Agent Basics",
+    questionText: "What is the main advantage of reinforcement learning over supervised learning?",
     optionA: "It requires more labeled training data",
-    optionB:
-      "It can learn from interaction with the environment without labeled examples",
+    optionB: "It can learn from interaction with the environment without labeled examples",
     optionC: "It is always faster to train",
     optionD: "It only works with numerical data",
     correctAnswer: "B",
@@ -334,10 +350,10 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4046",
     courseCode: "CZ4046",
     courseName: "Intelligent Agents",
+    topic: "Lecture 3: Multi-Agent Systems",
     questionText: "In multi-agent systems, what is coordination?",
     optionA: "Agents working independently without communication",
-    optionB:
-      "Agents working together to achieve individual or collective goals",
+    optionB: "Agents working together to achieve individual or collective goals",
     optionC: "Agents competing against each other",
     optionD: "Agents shutting down when conflicts arise",
     correctAnswer: "B",
@@ -349,11 +365,10 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4046",
     courseCode: "CZ4046",
     courseName: "Intelligent Agents",
-    questionText:
-      "What is the exploration vs exploitation dilemma in reinforcement learning?",
+    topic: "Lecture 1: Agent Basics",
+    questionText: "What is the exploration vs exploitation dilemma in reinforcement learning?",
     optionA: "Choosing between different programming languages",
-    optionB:
-      "Balancing between trying new actions and using known good actions",
+    optionB: "Balancing between trying new actions and using known good actions",
     optionC: "Deciding between supervised and unsupervised learning",
     optionD: "Choosing between different neural network architectures",
     correctAnswer: "B",
@@ -365,6 +380,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz4046",
     courseCode: "CZ4046",
     courseName: "Intelligent Agents",
+    topic: "Lecture 1: Agent Basics",
     questionText: "What is a rational agent in AI?",
     optionA: "An agent that always makes perfect decisions",
     optionB: "An agent that acts to maximize its expected performance measure",
@@ -381,6 +397,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz2006",
     courseCode: "CZ2006",
     courseName: "Software Engineering",
+    topic: "Lecture 1: SOLID Principles",
     questionText: "What does the 'S' in SOLID principles stand for?",
     optionA: "Scalability Principle",
     optionB: "Single Responsibility Principle",
@@ -395,8 +412,8 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz2006",
     courseCode: "CZ2006",
     courseName: "Software Engineering",
-    questionText:
-      "Which of the following is a key characteristic of Agile methodology?",
+    topic: "Lecture 2: Agile & Testing",
+    questionText: "Which of the following is a key characteristic of Agile methodology?",
     optionA: "Extensive documentation over working software",
     optionB: "Following a plan over responding to change",
     optionC: "Iterative development with frequent customer feedback",
@@ -410,6 +427,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz2006",
     courseCode: "CZ2006",
     courseName: "Software Engineering",
+    topic: "Lecture 2: Agile & Testing",
     questionText: "What is the primary purpose of unit testing?",
     optionA: "To test the entire system integration",
     optionB: "To test individual components or modules in isolation",
@@ -424,8 +442,8 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz2006",
     courseCode: "CZ2006",
     courseName: "Software Engineering",
-    questionText:
-      "Which design pattern is used to ensure a class has only one instance?",
+    topic: "Lecture 3: Design Patterns",
+    questionText: "Which design pattern is used to ensure a class has only one instance?",
     optionA: "Factory Pattern",
     optionB: "Observer Pattern",
     optionC: "Singleton Pattern",
@@ -439,8 +457,8 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz2006",
     courseCode: "CZ2006",
     courseName: "Software Engineering",
-    questionText:
-      "What is the main benefit of version control systems like Git?",
+    topic: "Lecture 2: Agile & Testing",
+    questionText: "What is the main benefit of version control systems like Git?",
     optionA: "Faster code execution",
     optionB: "Tracking changes and enabling collaboration on code",
     optionC: "Automatic bug fixing",
@@ -454,6 +472,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz2006",
     courseCode: "CZ2006",
     courseName: "Software Engineering",
+    topic: "Lecture 3: Design Patterns",
     questionText: "What is refactoring in software development?",
     optionA: "Adding new features to existing code",
     optionB: "Improving code structure without changing its external behavior",
@@ -468,6 +487,7 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     courseId: "course-cz2069",
     courseCode: "CZ2069",
     courseName: "Software",
+    topic: "Lecture 1: Software Basics",
     questionText: "What is refactoring in software development?",
     optionA: "Adding new features to existing code",
     optionB: "Improving code structure without changing its external behavior",
@@ -477,40 +497,51 @@ export const HARDCODED_QUIZ_QUESTIONS: QuizQuestion[] = [
     explanation:
       "Refactoring is the process of improving the internal structure and design of existing code without changing its external behavior, making it more maintainable, readable, and efficient.",
   },
-];
+]
 
 // Helper functions for quiz management
 export function getQuestionsByModule(moduleCode: string): QuizQuestion[] {
-  return HARDCODED_QUIZ_QUESTIONS.filter((q) => q.courseCode === moduleCode);
+  return HARDCODED_QUIZ_QUESTIONS.filter((q) => q.courseCode === moduleCode)
 }
 
-export function getRandomQuestions(
-  moduleCode: string,
-  count: number
-): QuizQuestion[] {
-  const moduleQuestions = getQuestionsByModule(moduleCode);
-  const shuffled = [...moduleQuestions].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(count, shuffled.length));
+export function getQuestionsByModuleAndTopic(moduleCode: string, topic: string): QuizQuestion[] {
+  return HARDCODED_QUIZ_QUESTIONS.filter((q) => q.courseCode === moduleCode && q.topic === topic)
+}
+
+export function getTopicsByModule(moduleCode: string): string[] {
+  return MODULE_TOPICS[moduleCode as keyof typeof MODULE_TOPICS] || []
+}
+
+export function getRandomQuestions(moduleCode: string, count: number): QuizQuestion[] {
+  const moduleQuestions = getQuestionsByModule(moduleCode)
+  const shuffled = [...moduleQuestions].sort(() => Math.random() - 0.5)
+  return shuffled.slice(0, Math.min(count, shuffled.length))
+}
+
+export function getRandomQuestionsByTopic(moduleCode: string, topic: string, count: number): QuizQuestion[] {
+  const topicQuestions = getQuestionsByModuleAndTopic(moduleCode, topic)
+  const shuffled = [...topicQuestions].sort(() => Math.random() - 0.5)
+  return shuffled.slice(0, Math.min(count, shuffled.length))
 }
 
 export function getAllModules(): Array<{
-  code: string;
-  name: string;
-  questionCount: number;
+  code: string
+  name: string
+  questionCount: number
 }> {
-  const modules = new Map<string, { name: string; count: number }>();
+  const modules = new Map<string, { name: string; count: number }>()
 
   HARDCODED_QUIZ_QUESTIONS.forEach((q) => {
     if (modules.has(q.courseCode)) {
-      modules.get(q.courseCode)!.count++;
+      modules.get(q.courseCode)!.count++
     } else {
-      modules.set(q.courseCode, { name: q.courseName, count: 1 });
+      modules.set(q.courseCode, { name: q.courseName, count: 1 })
     }
-  });
+  })
 
   return Array.from(modules.entries()).map(([code, { name, count }]) => ({
     code,
     name,
     questionCount: count,
-  }));
+  }))
 }
