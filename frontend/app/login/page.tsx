@@ -47,10 +47,11 @@ export default function LoginPage() {
     if (!isValidNTUEmail(email)) return;
 
     setIsLoading(true);
+    const lowerEmail = email.trim().toLowerCase();
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: lowerEmail,
         options: {
           shouldCreateUser: true,
         },
@@ -63,8 +64,9 @@ export default function LoginPage() {
       } else {
         setStep("otp");
         toast.success("OTP sent", {
-          description: `OTP sent to ${email}`,
+          description: `OTP sent to ${lowerEmail}`,
         });
+        setEmail(lowerEmail); // Always store lowercased email
       }
     } catch (error) {
       toast.error("Network error", {
@@ -105,8 +107,9 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      const lowerEmail = email.trim().toLowerCase();
       const { data, error } = await supabase.auth.verifyOtp({
-        email,
+        email: lowerEmail,
         token: otpCode,
         type: "email",
       });
@@ -124,7 +127,7 @@ export default function LoginPage() {
       } else if (data.user) {
         // Call backend user management to check/create user
         try {
-          const userData = await loginUser(email);
+          const userData = await loginUser(lowerEmail);
 
           // Generate a mock JWT token (in real app, this comes from your backend)
           const mockToken = `educhat_token_${Date.now()}_${Math.random()
@@ -132,7 +135,7 @@ export default function LoginPage() {
             .substr(2, 9)}`;
 
           // Login user with persistent token and role info
-          login(email, mockToken);
+          login(lowerEmail, mockToken);
 
           toast.success("Login successful", {
             description: `Welcome to EduChat!`,
