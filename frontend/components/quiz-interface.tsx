@@ -35,8 +35,8 @@ export default function QuizInterface({
   const [selectedModule, setSelectedModule] = useState<string>(
     currentModule || ""
   );
-  const [topicDropdownOpen, setTopicDropdownOpen] = useState(false)
-  const [selectedTopic, setSelectedTopic] = useState<string>("")
+  const [topicDropdownOpen, setTopicDropdownOpen] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<string>("");
   const [quizMode, setQuizMode] = useState<QuizMode>("random5");
   const [quizState, setQuizState] = useState<QuizState>("setup");
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -46,8 +46,20 @@ export default function QuizInterface({
   const [score, setScore] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  // Auto-select first topic when module changes
+  useEffect(() => {
+    if (selectedModule) {
+      const topics = getTopicsByModule(selectedModule);
+      setSelectedTopic(topics.length > 0 ? topics[0] : "");
+    } else {
+      setSelectedTopic("");
+    }
+  }, [selectedModule]);
+
   const modules = getAllModules();
-  const availableTopics = selectedModule ? getTopicsByModule(selectedModule) : []
+  const availableTopics = selectedModule
+    ? getTopicsByModule(selectedModule)
+    : [];
 
   const handleStartQuiz = () => {
     if (!selectedModule) return;
@@ -144,7 +156,10 @@ export default function QuizInterface({
                 <Button
                   variant="outline"
                   className="w-full justify-between h-12 text-base"
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  onClick={() => {
+                    setDropdownOpen(!dropdownOpen);
+                    if (!dropdownOpen) setTopicDropdownOpen(false); // Close topic dropdown when opening module dropdown
+                  }}
                 >
                   {selectedModule
                     ? `${selectedModule} - ${getSelectedModuleInfo()?.name}`
@@ -161,6 +176,7 @@ export default function QuizInterface({
                         onClick={() => {
                           setSelectedModule(module.code);
                           setDropdownOpen(false);
+                          setTopicDropdownOpen(false); // Also close topic dropdown when switching module
                         }}
                       >
                         {module.code} - {module.name}
@@ -176,7 +192,10 @@ export default function QuizInterface({
                   <Button
                     variant="outline"
                     className="w-full justify-between h-12 text-base bg-transparent"
-                    onClick={() => setTopicDropdownOpen(!topicDropdownOpen)}
+                    onClick={() => {
+                      setTopicDropdownOpen(!topicDropdownOpen);
+                      if (!topicDropdownOpen) setDropdownOpen(false); // Close module dropdown when opening topic dropdown
+                    }}
                   >
                     {selectedTopic || "Choose a topic..."}
                     <ChevronDown className="w-5 h-5 ml-2" />
@@ -189,8 +208,8 @@ export default function QuizInterface({
                           key={topic}
                           className="w-full text-left px-4 py-3 hover:bg-accent transition-colors duration-200 first:rounded-t-md last:rounded-b-md"
                           onClick={() => {
-                            setSelectedTopic(topic)
-                            setTopicDropdownOpen(false)
+                            setSelectedTopic(topic);
+                            setTopicDropdownOpen(false);
                           }}
                         >
                           {topic}
