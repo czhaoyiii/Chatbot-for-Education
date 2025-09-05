@@ -125,6 +125,7 @@ export default function CourseUploadTab({
         const updatedCourse = {
           ...course,
           filesCount: result.course.files_count ?? course.filesCount,
+          quizzesCount: result.course.quizzes_count ?? course.quizzesCount,
         } as Course;
         onUpdateCourse(updatedCourse);
         setSelectedFiles([]);

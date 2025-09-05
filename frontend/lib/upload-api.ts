@@ -185,3 +185,92 @@ export async function deleteCourseApi(params: {
     };
   }
 }
+
+export interface QuizQuestion {
+  id: string;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: string;
+  explanation: string;
+  created_at: string;
+}
+
+export interface QuizTopic {
+  id: string;
+  course_id: string;
+  topic_name: string;
+  created_at: string;
+  questions: QuizQuestion[];
+  question_count: number;
+}
+
+export interface GetCourseQuizzesResponse {
+  success: boolean;
+  course_id: string;
+  topics: QuizTopic[];
+  total_topics: number;
+  total_questions: number;
+}
+
+export async function getCourseQuizzes(
+  courseId: string
+): Promise<GetCourseQuizzesResponse | UploadError> {
+  try {
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+    const response = await fetch(`${backendUrl}/courses/${courseId}/quizzes`, {
+      method: "GET",
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || data.error || "Failed to fetch quizzes");
+    }
+    return data as GetCourseQuizzesResponse;
+  } catch (error) {
+    console.error("Get course quizzes API error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+export async function deleteQuizTopic(params: {
+  courseId: string;
+  topicId: string;
+  userEmail: string;
+}): Promise<{ success: boolean; message?: string } | UploadError> {
+  try {
+    const { courseId, topicId, userEmail } = params;
+    const formData = new FormData();
+    formData.append("user_email", userEmail);
+
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+    const response = await fetch(
+      `${backendUrl}/courses/${courseId}/quizzes/${topicId}`,
+      {
+        method: "DELETE",
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(
+        data.detail || data.error || "Failed to delete quiz topic"
+      );
+    }
+    return data as { success: boolean; message?: string };
+  } catch (error) {
+    console.error("Delete quiz topic API error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}

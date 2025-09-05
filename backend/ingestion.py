@@ -52,7 +52,9 @@ def files_upload(
     *,
     course_id: Optional[str] = None,
     course_file_ids: Optional[Dict[str, str]] = None,
-) -> str:
+    user_email: Optional[str] = None,
+    generate_quiz: bool = True,
+) -> Dict:
     start = time()
     try:
         documents_path = Path(documents_dir)
@@ -65,12 +67,18 @@ def files_upload(
             all_files.extend(list(documents_path.glob(extension)))
         
         if not all_files:
-            return "No supported files found in the directory"
+            return {"ingestion": "No supported files found in the directory", "quiz_generation": "No files to process"}
         
         all_chunks = []
+        file_contents = {}  # Store full content for quiz generation
+        
         for file_path in all_files:
             result = converter.convert(str(file_path))
             text = result.document.export_to_markdown()
+            
+            # Store full content for quiz generation
+            file_contents[file_path.name] = text
+            
             chunks = text_splitter.create_documents([text])
             total_chunks = len(chunks)
             for idx, chunk in enumerate(chunks):
@@ -85,6 +93,7 @@ def files_upload(
                         "total_chunks": total_chunks
                     }
                 })
+        
         # Insert into ingested_documents with required fields
         for chunk in all_chunks:
             row = {
@@ -98,17 +107,63 @@ def files_upload(
                 row["course_file_id"] = course_file_ids[chunk["filename"]]
             supabase.table("ingested_documents").insert(row).execute()
 
-        # End time
+        # End time for ingestion
         end = time()
-        print(f"Ingested {len(all_chunks)} chunks from {len(all_files)} PDFs. Time taken: {end - start:.3f}")
-        return f"Ingested {len(all_chunks)} chunks from {len(all_files)} PDFs. Time taken: {end - start:.3f}"
+        ingestion_message = f"Ingested {len(all_chunks)} chunks from {len(all_files)} files. Time taken: {end - start:.3f}s"
+        print(ingestion_message)
+        
+        result = {
+            "ingestion": ingestion_message,
+            "quiz_generation": "Skipped - will be generated separately",
+            "file_contents": file_contents if generate_quiz else None
+        }
+        
+        return result
     
     except Exception as e:
         print("An exception occured:", e)
+        return {"ingestion": f"Error: {str(e)}", "quiz_generation": "Not attempted due to ingestion error"}
 
 
-def pdf_upload():
+async def generate_quizzes_for_files(
+    course_id: str,
+    user_email: str,
+    file_contents: Dict[str, str],
+    course_file_ids: Optional[Dict[str, str]] = None
+) -> Dict:
     """
-    Deprecated. Use files_upload() instead.
+    Generate quizzes for multiple files asynchronously
     """
-    raise NotImplementedError("Use files_upload() with appropriate parameters.")
+    try:
+        from quiz_generation import generate_quiz_for_file, QuizGenerationRequest
+        
+        quiz_results = []
+        for filename, content in file_contents.items():
+            course_file_id = course_file_ids.get(filename) if course_file_ids else None
+            
+            quiz_request = QuizGenerationRequest(
+                course_id=course_id,
+                course_file_id=course_file_id,
+                filename=filename,
+                content=content,
+                user_email=user_email
+            )
+            
+            quiz_result = await generate_quiz_for_file(quiz_request)
+            quiz_results.append({
+                "filename": filename,
+                "result": quiz_result
+            })
+        
+        return {
+            "success": True,
+            "quizzes_generated": len(quiz_results),
+            "details": quiz_results
+        }
+        
+    except Exception as e:
+        print(f"Quiz generation error: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }

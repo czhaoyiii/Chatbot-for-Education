@@ -110,8 +110,8 @@ export default function CreateCourseForm({
           semester: "",
           year: new Date().getFullYear().toString(),
           studentsCount: 0,
-          filesCount: selectedFiles.length,
-          quizzesCount: 0,
+          filesCount: result.course.files_count,
+          quizzesCount: result.course.quizzes_count,
           lastModified: new Date().toISOString().split("T")[0],
         });
 

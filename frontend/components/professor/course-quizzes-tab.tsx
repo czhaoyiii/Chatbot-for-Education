@@ -1,41 +1,129 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Plus, Eye } from "lucide-react";
-import { useState } from "react";
-import type { Course } from "@/types/chat"; // Import Course from types/chat
-
-interface Quiz {
-  id: string;
-  title: string;
-  questions: number;
-  createdDate: string;
-  status: "active" | "draft" | "archived";
-}
+import { ClipboardList, Plus, Eye, Trash2, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import {
+  getCourseQuizzes,
+  deleteQuizTopic,
+  type QuizTopic,
+} from "@/lib/upload-api";
+import type { Course } from "@/types/chat";
 
 interface CourseQuizzesTabProps {
-  course: Course; // Use the imported Course type
-  onUpdateCourse: (course: Course) => void; // Use the imported Course type
+  course: Course;
+  onUpdateCourse: (course: Course) => void;
 }
 
 export default function CourseQuizzesTab({
   course,
   onUpdateCourse,
 }: CourseQuizzesTabProps) {
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const { user } = useAuth();
+  const [quizzes, setQuizzes] = useState<QuizTopic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const lastCourseId = useRef<string>("");
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-500";
-      case "draft":
-        return "bg-yellow-500";
-      case "archived":
-        return "bg-gray-500";
-      default:
-        return "bg-gray-500";
+  useEffect(() => {
+    // Only reload quizzes when the course ID actually changes, not on every course update
+    if (lastCourseId.current !== course.id) {
+      lastCourseId.current = course.id;
+      loadQuizzes();
+    }
+  }, [course.id]);
+
+  // Separate effect to handle manual refresh when needed
+  useEffect(() => {
+    // If quizzes array is empty but course shows quiz count > 0, we might need to refresh
+    if (quizzes.length === 0 && course.quizzesCount > 0 && !loading) {
+      const timer = setTimeout(() => {
+        loadQuizzes();
+      }, 1000); // Small delay to allow backend processing
+
+      return () => clearTimeout(timer);
+    }
+  }, [course.quizzesCount, quizzes.length, loading]);
+
+  const loadQuizzes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getCourseQuizzes(course.id);
+
+      if (response.success) {
+        setQuizzes(response.topics);
+        // Don't automatically update course quiz count - let the upload process handle it
+        // This prevents overriding fresh quiz counts from uploads with potentially stale data
+      } else {
+        setError((response as any).error || "Failed to load quizzes");
+      }
+    } catch (err) {
+      setError("Failed to load quizzes");
+      console.error("Error loading quizzes:", err);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleDeleteTopic = async (topicId: string) => {
+    if (
+      !user?.email ||
+      !confirm(
+        "Are you sure you want to delete this quiz topic? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setDeletingTopicId(topicId);
+      const response = await deleteQuizTopic({
+        courseId: course.id,
+        topicId,
+        userEmail: user.email,
+      });
+
+      if (response.success) {
+        // Remove the deleted topic from the list
+        setQuizzes((prev) => prev.filter((quiz) => quiz.id !== topicId));
+        // Update course quiz count
+        const updatedCourse = {
+          ...course,
+          quizzesCount: Math.max(0, course.quizzesCount - 1),
+        };
+        onUpdateCourse(updatedCourse);
+      } else {
+        setError((response as any).error || "Failed to delete quiz topic");
+      }
+    } catch (err) {
+      setError("Failed to delete quiz topic");
+      console.error("Error deleting quiz topic:", err);
+    } finally {
+      setDeletingTopicId(null);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading quizzes...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -46,29 +134,28 @@ export default function CourseQuizzesTab({
               Course Quizzes
             </h2>
             <p className="text-muted-foreground">
-              Create and manage quizzes for {course.code} - {course.name}
+              Manage auto-generated quizzes for {course.code} - {course.name}
             </p>
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           </div>
-          <Button className="bg-green-500 hover:bg-green-600 text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            Create New Quiz
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" onClick={loadQuizzes} size="sm">
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {quizzes.length === 0 ? (
           <div className="text-center py-12">
             <ClipboardList className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">
-              No quizzes created yet
+              No quizzes available yet
             </h3>
             <p className="text-muted-foreground mb-4">
-              Create your first quiz to assess student understanding of the
-              course material.
+              Quizzes are automatically generated when you upload course
+              materials. Upload some files to get started with auto-generated
+              quizzes.
             </p>
-            <Button className="bg-green-500 hover:bg-green-600 text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Your First Quiz
-            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -84,35 +171,89 @@ export default function CourseQuizzesTab({
                       {course.code}
                     </span>
                   </div>
-                  <div
-                    className={`w-2 h-2 rounded-full ${getStatusColor(
-                      quiz.status
-                    )}`}
-                  ></div>
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
                 </div>
 
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  {quiz.title}
+                  {quiz.topic_name}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {quiz.questions} questions • Created {quiz.createdDate}
+                  {quiz.question_count} questions • Created{" "}
+                  {formatDate(quiz.created_at)}
                 </p>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground capitalize">
-                    {quiz.status}
+                  <span className="text-xs text-muted-foreground">
+                    Auto-generated
                   </span>
                   <div className="flex items-center space-x-2">
                     <Button variant="ghost" size="sm" className="h-8 px-2">
                       <Eye className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-8 px-2">
-                      Edit
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-red-500 hover:text-red-700"
+                      onClick={() => handleDeleteTopic(quiz.id)}
+                      disabled={deletingTopicId === quiz.id}
+                    >
+                      {deletingTopicId === quiz.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {quizzes.length > 0 && (
+          <div className="mt-8 p-4 bg-muted/50 rounded-lg">
+            <h4 className="font-semibold text-foreground mb-2">Summary</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Total Topics:</span>
+                <p className="font-medium">{quizzes.length}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Total Questions:</span>
+                <p className="font-medium">
+                  {quizzes.reduce((sum, quiz) => sum + quiz.question_count, 0)}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Avg per Topic:</span>
+                <p className="font-medium">
+                  {quizzes.length > 0
+                    ? Math.round(
+                        quizzes.reduce(
+                          (sum, quiz) => sum + quiz.question_count,
+                          0
+                        ) / quizzes.length
+                      )
+                    : 0}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Latest:</span>
+                <p className="font-medium">
+                  {quizzes.length > 0
+                    ? formatDate(
+                        new Date(
+                          Math.max(
+                            ...quizzes.map((q) =>
+                              new Date(q.created_at).getTime()
+                            )
+                          )
+                        ).toISOString()
+                      )
+                    : "N/A"}
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>

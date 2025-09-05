@@ -109,8 +109,27 @@ async def create_course(
 
         # Run ingestion with course and file IDs (only add course_id and course_file_id)
         ingestion_result = files_upload(
-            temp_dir, course_id=course_id, course_file_ids=filename_to_fileid
+            temp_dir, 
+            course_id=course_id, 
+            course_file_ids=filename_to_fileid,
+            user_email=user_email,
+            generate_quiz=True
         )
+
+        # Generate quizzes if file contents are available
+        quiz_results = None
+        if isinstance(ingestion_result, dict) and ingestion_result.get("file_contents"):
+            try:
+                from ingestion import generate_quizzes_for_files
+                quiz_results = await generate_quizzes_for_files(
+                    course_id=course_id,
+                    user_email=user_email,
+                    file_contents=ingestion_result["file_contents"],
+                    course_file_ids=filename_to_fileid
+                )
+            except Exception as e:
+                print(f"Quiz generation error: {e}")
+                quiz_results = {"success": False, "error": str(e)}
 
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -122,6 +141,7 @@ async def create_course(
             "course": course,
             "files": uploaded_files,
             "ingestion_result": ingestion_result,
+            "quiz_generation_result": quiz_results,
         }
 
     except HTTPException:

@@ -18,6 +18,7 @@ from chat_management import (
     list_chat_sessions as list_chat_sessions_service,
     list_session_messages as list_session_messages_service,
 )
+from quiz_generation import get_course_quizzes
 
 app = FastAPI()
 
@@ -189,4 +190,109 @@ async def delete_chat_session(session_id: str):
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete session: {str(e)}")
+
+
+# Quiz endpoints
+@app.get("/courses/{course_id}/quizzes")
+async def get_course_quizzes_route(course_id: str):
+    """
+    Get all quiz topics and questions for a course
+    """
+    return await get_course_quizzes(course_id)
+
+
+@app.post("/courses/{course_id}/generate-quiz")
+async def generate_quiz_for_course_route(
+    course_id: str,
+    user_email: str = Form(...),
+):
+    """
+    Generate quizzes for all files in a course that don't have quizzes yet
+    """
+    try:
+        from quiz_generation import generate_quiz_for_file, QuizGenerationRequest
+        from ingestion import generate_quizzes_for_files
+        
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"]
+        )
+        
+        # Get all course files
+        files_result = supabase_client.table("course_files").select("*").eq("course_id", course_id).execute()
+        
+        if not files_result.data:
+            return {"success": False, "message": "No files found for this course"}
+        
+        # Check which files already have quizzes
+        existing_topics = supabase_client.table("quiz_topics").select("*").eq("course_id", course_id).execute()
+        existing_filenames = {topic.get("topic_name", "").split(" - ")[0] for topic in existing_topics.data} if existing_topics.data else set()
+        
+        # For simplicity, we'll regenerate content from files that need quizzes
+        # In a production environment, you might want to store the original content
+        quiz_results = []
+        
+        for file_record in files_result.data:
+            filename = file_record["filename"]
+            
+            # Skip if quiz already exists (basic check)
+            if any(filename.replace(".pdf", "").replace(".docx", "").replace(".pptx", "") in topic 
+                   for topic in existing_filenames):
+                continue
+            
+            # For this demo, we'll return a message that manual quiz generation is needed
+            # In reality, you'd need to either store the original content or re-process the file
+            quiz_results.append({
+                "filename": filename,
+                "status": "Needs manual processing - original content not stored"
+            })
+        
+        return {
+            "success": True,
+            "message": f"Quiz generation status for {len(quiz_results)} files",
+            "results": quiz_results,
+            "note": "Quiz generation is automatically done during file upload. For existing files, please re-upload them."
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating quizzes: {str(e)}")
+
+
+@app.delete("/courses/{course_id}/quizzes/{topic_id}")
+async def delete_quiz_topic_route(
+    course_id: str,
+    topic_id: str,
+    user_email: str = Form(...),
+):
+    """
+    Delete a quiz topic and all its questions
+    """
+    try:
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"]
+        )
+        
+        # Verify user has permission (course owner)
+        user_res = supabase_client.table("users").select("id").eq("email", user_email).execute()
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        user_id = user_res.data[0]["id"]
+        
+        course_res = supabase_client.table("courses").select("created_by").eq("id", course_id).execute()
+        if not course_res.data or course_res.data[0]["created_by"] != user_id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        
+        # Delete questions first (foreign key constraint)
+        supabase_client.table("quiz_questions").delete().eq("topic_id", topic_id).execute()
+        
+        # Delete topic
+        supabase_client.table("quiz_topics").delete().eq("id", topic_id).execute()
+        
+        return {"success": True, "message": "Quiz topic and questions deleted"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting quiz topic: {str(e)}")
 
