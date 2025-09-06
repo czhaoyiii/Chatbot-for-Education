@@ -35,18 +35,6 @@ export default function CourseQuizzesTab({
     }
   }, [course.id]);
 
-  // Separate effect to handle manual refresh when needed
-  useEffect(() => {
-    // If quizzes array is empty but course shows quiz count > 0, we might need to refresh
-    if (quizzes.length === 0 && course.quizzesCount > 0 && !loading) {
-      const timer = setTimeout(() => {
-        loadQuizzes();
-      }, 1000); // Small delay to allow backend processing
-
-      return () => clearTimeout(timer);
-    }
-  }, [course.quizzesCount, quizzes.length, loading]);
-
   const loadQuizzes = async () => {
     try {
       setLoading(true);
@@ -134,13 +122,14 @@ export default function CourseQuizzesTab({
               Course Quizzes
             </h2>
             <p className="text-muted-foreground">
-              Manage auto-generated quizzes for {course.code} - {course.name}
+              Manage quizzes for {course.code} - {course.name}
             </p>
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" onClick={loadQuizzes} size="sm">
-              Refresh
+            <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              Create New Quiz
             </Button>
           </div>
         </div>
@@ -152,9 +141,7 @@ export default function CourseQuizzesTab({
               No quizzes available yet
             </h3>
             <p className="text-muted-foreground mb-4">
-              Quizzes are automatically generated when you upload course
-              materials. Upload some files to get started with auto-generated
-              quizzes.
+              Create your first quiz to get started.
             </p>
           </div>
         ) : (
@@ -183,9 +170,7 @@ export default function CourseQuizzesTab({
                 </p>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    Auto-generated
-                  </span>
+                  
                   <div className="flex items-center space-x-2">
                     <Button variant="ghost" size="sm" className="h-8 px-2">
                       <Eye className="w-4 h-4" />
