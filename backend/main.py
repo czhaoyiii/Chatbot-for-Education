@@ -296,3 +296,255 @@ async def delete_quiz_topic_route(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting quiz topic: {str(e)}")
 
+
+@app.put("/courses/{course_id}/quizzes/{topic_id}")
+async def update_quiz_topic_route(
+    course_id: str,
+    topic_id: str,
+    user_email: str = Form(...),
+    topic_name: str = Form(...),
+):
+    """
+    Update a quiz topic name
+    """
+    try:
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"]
+        )
+        
+        # Verify user has permission (course owner)
+        user_res = supabase_client.table("users").select("id").eq("email", user_email).execute()
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        user_id = user_res.data[0]["id"]
+        
+        course_res = supabase_client.table("courses").select("created_by").eq("id", course_id).execute()
+        if not course_res.data or course_res.data[0]["created_by"] != user_id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        
+        # Verify topic belongs to the course
+        topic_res = supabase_client.table("quiz_topics").select("course_id").eq("id", topic_id).execute()
+        if not topic_res.data or topic_res.data[0]["course_id"] != course_id:
+            raise HTTPException(status_code=404, detail="Quiz topic not found or doesn't belong to this course")
+        
+        # Update topic name
+        update_res = supabase_client.table("quiz_topics").update({
+            "topic_name": topic_name.strip()
+        }).eq("id", topic_id).execute()
+        
+        if not update_res.data:
+            raise HTTPException(status_code=500, detail="Failed to update quiz topic")
+        
+        return {"success": True, "message": "Quiz topic updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating quiz topic: {str(e)}")
+
+
+@app.get("/courses/{course_id}/quizzes/{topic_id}/details")
+async def get_quiz_topic_details_route(course_id: str, topic_id: str):
+    """
+    Get detailed information about a quiz topic including all questions
+    """
+    try:
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"]
+        )
+        
+        # Get topic details
+        topic_res = supabase_client.table("quiz_topics").select("*").eq("id", topic_id).eq("course_id", course_id).execute()
+        if not topic_res.data:
+            raise HTTPException(status_code=404, detail="Quiz topic not found")
+        
+        topic = topic_res.data[0]
+        
+        # Get all questions for this topic
+        questions_res = supabase_client.table("quiz_questions").select("*").eq("topic_id", topic_id).order("created_at").execute()
+        
+        topic["questions"] = questions_res.data or []
+        topic["question_count"] = len(questions_res.data or [])
+        
+        return {"success": True, "topic": topic}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting quiz details: {str(e)}")
+
+
+@app.put("/courses/{course_id}/quizzes/{topic_id}/questions/{question_id}")
+async def update_quiz_question_route(
+    course_id: str,
+    topic_id: str,
+    question_id: str,
+    user_email: str = Form(...),
+    question_text: str = Form(None),
+    option_a: str = Form(None),
+    option_b: str = Form(None),
+    option_c: str = Form(None),
+    option_d: str = Form(None),
+    correct_answer: str = Form(None),
+    explanation: str = Form(None),
+):
+    """
+    Update a quiz question
+    """
+    try:
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"]
+        )
+        
+        # Verify user has permission (course owner)
+        user_res = supabase_client.table("users").select("id").eq("email", user_email).execute()
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        user_id = user_res.data[0]["id"]
+        
+        course_res = supabase_client.table("courses").select("created_by").eq("id", course_id).execute()
+        if not course_res.data or course_res.data[0]["created_by"] != user_id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        
+        # Verify question exists and belongs to the topic/course
+        question_res = supabase_client.table("quiz_questions").select("topic_id").eq("id", question_id).execute()
+        if not question_res.data or question_res.data[0]["topic_id"] != topic_id:
+            raise HTTPException(status_code=404, detail="Quiz question not found or doesn't belong to this topic")
+        
+        # Build update object with only provided fields
+        update_data = {}
+        if question_text is not None: update_data["question_text"] = question_text.strip()
+        if option_a is not None: update_data["option_a"] = option_a.strip()
+        if option_b is not None: update_data["option_b"] = option_b.strip()
+        if option_c is not None: update_data["option_c"] = option_c.strip()
+        if option_d is not None: update_data["option_d"] = option_d.strip()
+        if correct_answer is not None: update_data["correct_answer"] = correct_answer.strip()
+        if explanation is not None: update_data["explanation"] = explanation.strip()
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
+        # Update question
+        update_res = supabase_client.table("quiz_questions").update(update_data).eq("id", question_id).execute()
+        
+        if not update_res.data:
+            raise HTTPException(status_code=500, detail="Failed to update quiz question")
+        
+        return {"success": True, "message": "Quiz question updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating quiz question: {str(e)}")
+
+
+@app.post("/courses/{course_id}/quizzes/{topic_id}/questions")
+async def create_quiz_question_route(
+    course_id: str,
+    topic_id: str,
+    user_email: str = Form(...),
+    question_text: str = Form(...),
+    option_a: str = Form(...),
+    option_b: str = Form(...),
+    option_c: str = Form(...),
+    option_d: str = Form(...),
+    correct_answer: str = Form(...),
+    explanation: str = Form(...),
+):
+    """
+    Create a new quiz question
+    """
+    try:
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"]
+        )
+        
+        # Verify user has permission (course owner)
+        user_res = supabase_client.table("users").select("id").eq("email", user_email).execute()
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        user_id = user_res.data[0]["id"]
+        
+        course_res = supabase_client.table("courses").select("created_by").eq("id", course_id).execute()
+        if not course_res.data or course_res.data[0]["created_by"] != user_id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        
+        # Verify topic exists and belongs to the course
+        topic_res = supabase_client.table("quiz_topics").select("course_id").eq("id", topic_id).execute()
+        if not topic_res.data or topic_res.data[0]["course_id"] != course_id:
+            raise HTTPException(status_code=404, detail="Quiz topic not found or doesn't belong to this course")
+        
+        # Validate correct answer
+        if correct_answer not in ["A", "B", "C", "D"]:
+            raise HTTPException(status_code=400, detail="Correct answer must be A, B, C, or D")
+        
+        # Create new question
+        question_data = {
+            "topic_id": topic_id,
+            "question_text": question_text.strip(),
+            "option_a": option_a.strip(),
+            "option_b": option_b.strip(),
+            "option_c": option_c.strip(),
+            "option_d": option_d.strip(),
+            "correct_answer": correct_answer.strip(),
+            "explanation": explanation.strip(),
+        }
+        
+        create_res = supabase_client.table("quiz_questions").insert(question_data).execute()
+        
+        if not create_res.data:
+            raise HTTPException(status_code=500, detail="Failed to create quiz question")
+        
+        return {"success": True, "question": create_res.data[0], "message": "Quiz question created successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating quiz question: {str(e)}")
+
+
+@app.delete("/courses/{course_id}/quizzes/{topic_id}/questions/{question_id}")
+async def delete_quiz_question_route(
+    course_id: str,
+    topic_id: str,
+    question_id: str,
+    user_email: str = Form(...),
+):
+    """
+    Delete a quiz question
+    """
+    try:
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"]
+        )
+        
+        # Verify user has permission (course owner)
+        user_res = supabase_client.table("users").select("id").eq("email", user_email).execute()
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        user_id = user_res.data[0]["id"]
+        
+        course_res = supabase_client.table("courses").select("created_by").eq("id", course_id).execute()
+        if not course_res.data or course_res.data[0]["created_by"] != user_id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        
+        # Verify question exists and belongs to the topic/course
+        question_res = supabase_client.table("quiz_questions").select("topic_id").eq("id", question_id).execute()
+        if not question_res.data or question_res.data[0]["topic_id"] != topic_id:
+            raise HTTPException(status_code=404, detail="Quiz question not found or doesn't belong to this topic")
+        
+        # Delete the question
+        delete_res = supabase_client.table("quiz_questions").delete().eq("id", question_id).execute()
+        
+        return {"success": True, "message": "Quiz question deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting quiz question: {str(e)}")
+
