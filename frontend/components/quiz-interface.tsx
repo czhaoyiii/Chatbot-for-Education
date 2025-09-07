@@ -11,33 +11,50 @@ import {
   ArrowLeft,
   ChevronDown,
 } from "lucide-react";
-import {
-  getQuestionsByModule,
-  getRandomQuestions,
-  getAllModules,
-  getTopicsByModule,
-  type QuizQuestion,
-} from "@/data/quiz-questions";
+import { getCourseQuizzes, type QuizQuestion as APIQuizQuestion, type QuizTopic } from "@/lib/upload-api";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
+
+// Transform API quiz question to match interface expectations
+interface QuizQuestion {
+  id: string;
+  courseId: string;
+  courseCode: string;
+  courseName: string;
+  topic: string;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctAnswer: "A" | "B" | "C" | "D";
+  explanation: string;
+}
+
+interface Course {
+  id: string;
+  code: string;
+  name: string;
+}
 
 interface QuizInterfaceProps {
   currentModule?: string;
   onBack?: () => void;
 }
 
-type QuizMode = "all" | "random5";
 type QuizState = "setup" | "active" | "completed";
 
 export default function QuizInterface({
   currentModule,
   onBack,
 }: QuizInterfaceProps) {
-  const [selectedModule, setSelectedModule] = useState<string>(
-    currentModule || ""
-  );
+  const { user } = useAuth();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [availableTopics, setAvailableTopics] = useState<QuizTopic[]>([]);
   const [topicDropdownOpen, setTopicDropdownOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<string>("");
-  const [quizMode, setQuizMode] = useState<QuizMode>("random5");
   const [quizState, setQuizState] = useState<QuizState>("setup");
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -45,38 +62,134 @@ export default function QuizInterface({
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showQuitConfirmation, setShowQuitConfirmation] = useState(false);
 
-  // Auto-select first topic when module changes
+  // Show loading or login message if user is not authenticated
+  if (!user) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+          <p className="text-muted-foreground">Please log in to access quizzes.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Transform API quiz question to interface format
+  const transformQuizQuestion = (apiQuestion: APIQuizQuestion, topic: QuizTopic, course: Course): QuizQuestion => ({
+    id: apiQuestion.id,
+    courseId: course.id,
+    courseCode: course.code,
+    courseName: course.name,
+    topic: topic.topic_name,
+    questionText: apiQuestion.question_text,
+    optionA: apiQuestion.option_a,
+    optionB: apiQuestion.option_b,
+    optionC: apiQuestion.option_c,
+    optionD: apiQuestion.option_d,
+    correctAnswer: apiQuestion.correct_answer as "A" | "B" | "C" | "D",
+    explanation: apiQuestion.explanation,
+  });
+
+  // Load available courses
   useEffect(() => {
-    if (selectedModule) {
-      const topics = getTopicsByModule(selectedModule);
-      setSelectedTopic(topics.length > 0 ? topics[0] : "");
+    const loadCourses = async () => {
+      if (!user?.id) return;
+      try {
+        const { data, error } = await supabase
+          .from("courses")
+          .select("id, code, name")
+          .eq("created_by", user.id)
+          .order("code", { ascending: true });
+
+        if (error) throw error;
+        setCourses(data || []);
+      } catch (error) {
+        console.error("Error loading courses:", error);
+        setError("Failed to load courses");
+      }
+    };
+
+    loadCourses();
+  }, [user?.id]);
+
+  // Load quiz topics when course is selected
+  useEffect(() => {
+    const loadQuizTopics = async () => {
+      if (!selectedCourseId) {
+        setAvailableTopics([]);
+        setSelectedTopic("");
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await getCourseQuizzes(selectedCourseId);
+        if (response.success) {
+          setAvailableTopics(response.topics);
+          setSelectedTopic(response.topics.length > 0 ? response.topics[0].topic_name : "");
+        } else {
+          setError("Failed to load quiz topics");
+          setAvailableTopics([]);
+          setSelectedTopic("");
+        }
+      } catch (error) {
+        console.error("Error loading quiz topics:", error);
+        setError("Failed to load quiz topics");
+        setAvailableTopics([]);
+        setSelectedTopic("");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuizTopics();
+  }, [selectedCourseId]);
+
+  // Auto-select first topic when topics change
+  useEffect(() => {
+    if (availableTopics.length > 0) {
+      setSelectedTopic(availableTopics[0].topic_name);
     } else {
       setSelectedTopic("");
     }
-  }, [selectedModule]);
-
-  const modules = getAllModules();
-  const availableTopics = selectedModule
-    ? getTopicsByModule(selectedModule)
-    : [];
+  }, [availableTopics]);
 
   const handleStartQuiz = () => {
-    if (!selectedModule) return;
+    if (!selectedCourseId || !selectedTopic) return;
 
-    const moduleQuestions =
-      quizMode === "all"
-        ? getQuestionsByModule(selectedModule)
-        : getRandomQuestions(selectedModule, 5);
+    const selectedTopicData = availableTopics.find(topic => topic.topic_name === selectedTopic);
+    if (!selectedTopicData || selectedTopicData.questions.length === 0) {
+      setError("No questions available for this topic");
+      return;
+    }
 
-    if (moduleQuestions.length === 0) return;
+    const selectedCourse = courses.find(course => course.id === selectedCourseId);
+    if (!selectedCourse) return;
 
-    setQuestions(moduleQuestions);
+    // Transform API questions to interface format
+    const transformedQuestions = selectedTopicData.questions.map(q => 
+      transformQuizQuestion(q, selectedTopicData, selectedCourse)
+    );
+
+    // Always use 20 questions (or all available if less than 20)
+    const shuffled = [...transformedQuestions].sort(() => 0.5 - Math.random());
+    const quizQuestions = shuffled.slice(0, Math.min(20, shuffled.length));
+
+    if (quizQuestions.length === 0) return;
+
+    setQuestions(quizQuestions);
     setQuizState("active");
     setCurrentQuestionIndex(0);
     setScore(0);
     setSelectedAnswer(null);
     setShowResult(false);
+    setError(null);
   };
 
   const handleAnswerSelect = (answer: string) => {
@@ -105,28 +218,42 @@ export default function QuizInterface({
     setSelectedAnswer(null);
     setShowResult(false);
     setScore(0);
-    // Immediately start the quiz for the selected module
-    const moduleQuestions =
-      quizMode === "all"
-        ? getQuestionsByModule(selectedModule)
-        : getRandomQuestions(selectedModule, 5);
-    if (moduleQuestions.length === 0) return;
-    setQuestions(moduleQuestions);
-    setQuizState("active");
+    
+    // Keep current questions and restart the quiz
+    if (questions.length > 0) {
+      setQuizState("active");
+    }
   };
 
   const handleBackToSetup = () => {
-    setSelectedModule("");
+    setSelectedCourseId("");
+    setSelectedTopic("");
     setQuizState("setup");
+    setShowQuitConfirmation(false);
   };
 
-  const getSelectedModuleInfo = () => {
-    return modules.find((m) => m.code === selectedModule);
+  const handleQuitQuiz = () => {
+    setShowQuitConfirmation(true);
+  };
+
+  const handleConfirmQuit = () => {
+    setShowQuitConfirmation(false);
+    handleBackToSetup();
+  };
+
+  const handleCancelQuit = () => {
+    setShowQuitConfirmation(false);
+  };
+
+  const getSelectedCourseInfo = () => {
+    return courses.find((c) => c.id === selectedCourseId);
   };
 
   const getQuestionCount = () => {
-    if (!selectedModule) return 0;
-    return quizMode === "all" ? getQuestionsByModule(selectedModule).length : 5;
+    if (!selectedTopic || !selectedCourseId) return 0;
+    const selectedTopicData = availableTopics.find(topic => topic.topic_name === selectedTopic);
+    if (!selectedTopicData) return 0;
+    return Math.min(20, selectedTopicData.questions.length);
   };
 
   // Quiz Setup Screen - Match the provided design exactly with scrolling
@@ -149,52 +276,71 @@ export default function QuizInterface({
                 Welcome to EduQuiz!
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed mb-8">
-                Select a module to start quiz.
+                Select a course to start quiz.
               </p>
-              {/* Module Dropdown */}
+              {/* Course Dropdown */}
               <div className="relative mb-8">
                 <Button
                   variant="outline"
                   className="w-full justify-between h-12 text-base"
                   onClick={() => {
-                    setDropdownOpen(!dropdownOpen);
-                    if (!dropdownOpen) setTopicDropdownOpen(false); // Close topic dropdown when opening module dropdown
+                    setCourseDropdownOpen(!courseDropdownOpen);
+                    if (!courseDropdownOpen) setTopicDropdownOpen(false); // Close topic dropdown when opening course dropdown
                   }}
                 >
-                  {selectedModule
-                    ? `${selectedModule} - ${getSelectedModuleInfo()?.name}`
-                    : "Choose a module..."}
+                  {selectedCourseId
+                    ? `${getSelectedCourseInfo()?.code} - ${getSelectedCourseInfo()?.name}`
+                    : "Choose a course..."}
                   <ChevronDown className="w-5 h-5 ml-2" />
                 </Button>
 
-                {dropdownOpen && (
+                {courseDropdownOpen && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-10 max-h-50 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-gray-700">
-                    {modules.map((module) => (
+                    {courses.map((course) => (
                       <button
-                        key={module.code}
+                        key={course.id}
                         className="w-full text-left px-4 py-3 hover:bg-accent transition-colors duration-200 first:rounded-t-md last:rounded-b-md"
                         onClick={() => {
-                          setSelectedModule(module.code);
-                          setDropdownOpen(false);
-                          setTopicDropdownOpen(false); // Also close topic dropdown when switching module
+                          setSelectedCourseId(course.id);
+                          setCourseDropdownOpen(false);
+                          setTopicDropdownOpen(false); // Also close topic dropdown when switching course
                         }}
                       >
-                        {module.code} - {module.name}
+                        {course.code} - {course.name}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
 
+              {/* Loading and Error States */}
+              {loading && (
+                <div className="mb-6 text-center text-muted-foreground">
+                  Loading quiz topics...
+                </div>
+              )}
+
+              {error && (
+                <div className="mb-6 text-center text-red-500">
+                  {error}
+                </div>
+              )}
+
+              {selectedCourseId && availableTopics.length === 0 && !loading && (
+                <div className="mb-6 text-center text-muted-foreground">
+                  No quiz topics available for this course.
+                </div>
+              )}
+
               {/* Topic Selection */}
-              {selectedModule && (
+              {selectedCourseId && availableTopics.length > 0 && (
                 <div className="relative mb-8">
                   <Button
                     variant="outline"
                     className="w-full justify-between h-12 text-base bg-transparent"
                     onClick={() => {
                       setTopicDropdownOpen(!topicDropdownOpen);
-                      if (!topicDropdownOpen) setDropdownOpen(false); // Close module dropdown when opening topic dropdown
+                      if (!topicDropdownOpen) setCourseDropdownOpen(false); // Close course dropdown when opening topic dropdown
                     }}
                   >
                     {selectedTopic || "Choose a topic..."}
@@ -205,14 +351,14 @@ export default function QuizInterface({
                     <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-10 max-h-50 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-gray-700">
                       {availableTopics.map((topic) => (
                         <button
-                          key={topic}
+                          key={topic.id}
                           className="w-full text-left px-4 py-3 hover:bg-accent transition-colors duration-200 first:rounded-t-md last:rounded-b-md"
                           onClick={() => {
-                            setSelectedTopic(topic);
+                            setSelectedTopic(topic.topic_name);
                             setTopicDropdownOpen(false);
                           }}
                         >
-                          {topic}
+                          {topic.topic_name}
                         </button>
                       ))}
                     </div>
@@ -223,10 +369,10 @@ export default function QuizInterface({
               {/* Start Quiz Button */}
               <Button
                 onClick={handleStartQuiz}
-                disabled={!selectedModule}
+                disabled={!selectedCourseId || !selectedTopic || availableTopics.length === 0}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white h-12 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Start Quiz
+                Start Quiz (20 Questions)
               </Button>
 
               {/* Back Button */}
@@ -272,7 +418,7 @@ export default function QuizInterface({
                   Quiz Complete!
                 </h1>
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                  Here's how you performed on {selectedModule}
+                  Here's how you performed on {getSelectedCourseInfo()?.code}
                 </p>
               </div>
 
@@ -289,9 +435,9 @@ export default function QuizInterface({
 
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Quiz mode:</span>
+                      <span className="text-muted-foreground">Questions:</span>
                       <span className="text-foreground">
-                        {quizMode === "all" ? "Complete Module" : "Quick Quiz"}
+                        {questions.length} questions
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -359,6 +505,14 @@ export default function QuizInterface({
             <div className="text-sm text-muted-foreground">
               Score: {score}/{questions.length}
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleQuitQuiz}
+              className="text-red-500 border-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+            >
+              Quit Quiz
+            </Button>
           </div>
         </div>
       </div>
@@ -370,7 +524,7 @@ export default function QuizInterface({
             <CardHeader>
               <div className="flex items-center space-x-2 mb-2">
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                  {selectedModule}
+                  {getSelectedCourseInfo()?.code}
                 </span>
               </div>
               <CardTitle className="text-xl leading-relaxed text-foreground">
@@ -450,6 +604,35 @@ export default function QuizInterface({
           </Card>
         </div>
       </div>
+
+      {/* Quit Confirmation Dialog */}
+      {showQuitConfirmation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Are you sure you want to quit?
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              Your progress will be lost and you'll return to the quiz selection page.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleCancelQuit}
+                className="px-4 py-2"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmQuit}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white"
+              >
+                Yes, Quit Quiz
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
