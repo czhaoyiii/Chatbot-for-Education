@@ -12,6 +12,7 @@ import {
   updateQuizQuestion,
   createQuizQuestion,
   deleteQuizQuestion,
+  createQuizTopic,
   type QuizTopic,
   type QuizQuestion,
 } from "@/lib/upload-api";
@@ -32,22 +33,29 @@ export default function CourseQuizzesTab({
   const [loading, setLoading] = useState(true);
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null);
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
-  const [editingQuiz, setEditingQuiz] = useState<(QuizTopic & { questions: QuizQuestion[] }) | null>(null);
+  const [editingQuiz, setEditingQuiz] = useState<
+    (QuizTopic & { questions: QuizQuestion[] }) | null
+  >(null);
   const [savingQuestion, setSavingQuestion] = useState<string | null>(null);
   const [creatingNewQuestion, setCreatingNewQuestion] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newQuestion, setNewQuestion] = useState({
-    text: '',
-    optionA: '',
-    optionB: '',
-    optionC: '',
-    optionD: '',
-    correctAnswer: 'A' as 'A' | 'B' | 'C' | 'D',
-    explanation: ''
+    text: "",
+    optionA: "",
+    optionB: "",
+    optionC: "",
+    optionD: "",
+    correctAnswer: "A" as "A" | "B" | "C" | "D",
+    explanation: "",
   });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [originalQuiz, setOriginalQuiz] = useState<(QuizTopic & { questions: QuizQuestion[] }) | null>(null);
+  const [originalQuiz, setOriginalQuiz] = useState<
+    (QuizTopic & { questions: QuizQuestion[] }) | null
+  >(null);
   const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
+  const [showCreateQuizModal, setShowCreateQuizModal] = useState(false);
+  const [newQuizTopicName, setNewQuizTopicName] = useState("");
+  const [creatingQuizTopic, setCreatingQuizTopic] = useState(false);
   const lastCourseId = useRef<string>("");
 
   useEffect(() => {
@@ -63,12 +71,13 @@ export default function CourseQuizzesTab({
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        e.returnValue =
+          "You have unsaved changes. Are you sure you want to leave?";
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
   const loadQuizzes = async () => {
@@ -121,22 +130,27 @@ export default function CourseQuizzesTab({
       return;
     }
 
-    setEditingQuiz(prev => prev ? { ...prev, topic_name: newName.trim() } : null);
+    setEditingQuiz((prev) =>
+      prev ? { ...prev, topic_name: newName.trim() } : null
+    );
     setHasUnsavedChanges(true);
   };
 
-  const handleUpdateQuestion = async (questionId: string, updates: Partial<QuizQuestion>) => {
+  const handleUpdateQuestion = async (
+    questionId: string,
+    updates: Partial<QuizQuestion>
+  ) => {
     if (!editingQuiz) {
       return;
     }
 
-    setEditingQuiz(prev => {
+    setEditingQuiz((prev) => {
       if (!prev) return null;
       return {
         ...prev,
-        questions: prev.questions.map(q => 
+        questions: prev.questions.map((q) =>
           q.id === questionId ? { ...q, ...updates } : q
-        )
+        ),
       };
     });
     setHasUnsavedChanges(true);
@@ -148,7 +162,7 @@ export default function CourseQuizzesTab({
 
   const handleAddQuestionToList = () => {
     if (!newQuestion.text.trim()) {
-      toast.error('Question text is required');
+      toast.error("Question text is required");
       return;
     }
 
@@ -165,45 +179,45 @@ export default function CourseQuizzesTab({
       created_at: new Date().toISOString(),
     };
 
-    setEditingQuiz(prev => {
+    setEditingQuiz((prev) => {
       if (!prev) return null;
       return {
         ...prev,
-        questions: [...prev.questions, newQuestionObj as QuizQuestion]
+        questions: [...prev.questions, newQuestionObj as QuizQuestion],
       };
     });
 
     // Reset the form and close modal
     setNewQuestion({
-      text: '',
-      optionA: '',
-      optionB: '',
-      optionC: '',
-      optionD: '',
-      correctAnswer: 'A',
-      explanation: ''
+      text: "",
+      optionA: "",
+      optionB: "",
+      optionC: "",
+      optionD: "",
+      correctAnswer: "A",
+      explanation: "",
     });
 
     setShowAddQuestionModal(false);
     setHasUnsavedChanges(true);
-    toast.success('Question added (click Save Changes to persist)');
+    toast.success("Question added (click Save Changes to persist)");
   };
 
   const handleDeleteQuestion = async (questionId: string) => {
-    if (!confirm('Are you sure you want to delete this question?')) {
+    if (!confirm("Are you sure you want to delete this question?")) {
       return;
     }
 
-    setEditingQuiz(prev => {
+    setEditingQuiz((prev) => {
       if (!prev) return null;
       return {
         ...prev,
-        questions: prev.questions.filter(q => q.id !== questionId)
+        questions: prev.questions.filter((q) => q.id !== questionId),
       };
     });
 
     setHasUnsavedChanges(true);
-    toast.success('Question removed (click Save to persist)');
+    toast.success("Question removed (click Save to persist)");
   };
 
   const handleSaveChanges = async () => {
@@ -212,13 +226,17 @@ export default function CourseQuizzesTab({
     }
 
     // Ask for confirmation before saving
-    if (!confirm('Are you sure you want to save all changes? This will update the quiz in the database.')) {
+    if (
+      !confirm(
+        "Are you sure you want to save all changes? This will update the quiz in the database."
+      )
+    ) {
       return;
     }
 
     try {
       setLoading(true);
-      
+
       // Save topic name if changed
       if (editingQuiz.topic_name !== originalQuiz.topic_name) {
         const response = await updateQuizTopic({
@@ -229,14 +247,18 @@ export default function CourseQuizzesTab({
         });
 
         if (!response.success) {
-          throw new Error((response as any).error || "Failed to update quiz topic");
+          throw new Error(
+            (response as any).error || "Failed to update quiz topic"
+          );
         }
       }
 
       // Handle question updates and deletions
       for (const originalQuestion of originalQuiz.questions) {
-        const currentQuestion = editingQuiz.questions.find(q => q.id === originalQuestion.id);
-        
+        const currentQuestion = editingQuiz.questions.find(
+          (q) => q.id === originalQuestion.id
+        );
+
         if (!currentQuestion) {
           // Question was deleted
           await deleteQuizQuestion({
@@ -245,7 +267,9 @@ export default function CourseQuizzesTab({
             questionId: originalQuestion.id,
             userEmail: user.email,
           });
-        } else if (JSON.stringify(currentQuestion) !== JSON.stringify(originalQuestion)) {
+        } else if (
+          JSON.stringify(currentQuestion) !== JSON.stringify(originalQuestion)
+        ) {
           // Question was updated
           await updateQuizQuestion({
             courseId: course.id,
@@ -259,7 +283,7 @@ export default function CourseQuizzesTab({
 
       // Handle new questions
       for (const question of editingQuiz.questions) {
-        if (question.id.startsWith('temp-')) {
+        if (question.id.startsWith("temp-")) {
           // This is a new question
           const result = await createQuizQuestion({
             courseId: course.id,
@@ -276,15 +300,15 @@ export default function CourseQuizzesTab({
             userEmail: user.email,
           });
 
-          if ('question' in result && result.question) {
+          if ("question" in result && result.question) {
             // Update the question with the real ID
-            setEditingQuiz(prev => {
+            setEditingQuiz((prev) => {
               if (!prev) return null;
               return {
                 ...prev,
-                questions: prev.questions.map(q => 
+                questions: prev.questions.map((q) =>
                   q.id === question.id ? result.question! : q
-                )
+                ),
               };
             });
           }
@@ -292,13 +316,13 @@ export default function CourseQuizzesTab({
       }
 
       // Update the local quizzes list
-      setQuizzes(prev => 
-        prev.map(quiz => 
-          quiz.id === editingQuiz.id 
-            ? { 
-                ...quiz, 
+      setQuizzes((prev) =>
+        prev.map((quiz) =>
+          quiz.id === editingQuiz.id
+            ? {
+                ...quiz,
                 topic_name: editingQuiz.topic_name,
-                question_count: editingQuiz.questions.length
+                question_count: editingQuiz.questions.length,
               }
             : quiz
         )
@@ -306,24 +330,26 @@ export default function CourseQuizzesTab({
 
       setHasUnsavedChanges(false);
       setOriginalQuiz(JSON.parse(JSON.stringify(editingQuiz))); // Update original
-      toast.success('Changes saved successfully!');
+      toast.success("Changes saved successfully!");
 
       // Return to main quiz list without confirmation
       setEditingTopicId(null);
       setEditingQuiz(null);
       setOriginalQuiz(null);
       setHasUnsavedChanges(false);
-
     } catch (error) {
-      console.error('Error saving changes:', error);
-      toast.error('Failed to save changes');
+      console.error("Error saving changes:", error);
+      toast.error("Failed to save changes");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancelChanges = () => {
-    if (hasUnsavedChanges && !confirm('Are you sure you want to discard your changes?')) {
+    if (
+      hasUnsavedChanges &&
+      !confirm("Are you sure you want to discard your changes?")
+    ) {
       return;
     }
 
@@ -334,15 +360,15 @@ export default function CourseQuizzesTab({
     setCreatingNewQuestion(false);
     setHasUnsavedChanges(false);
     setNewQuestion({
-      text: '',
-      optionA: '',
-      optionB: '',
-      optionC: '',
-      optionD: '',
-      correctAnswer: 'A',
-      explanation: ''
+      text: "",
+      optionA: "",
+      optionB: "",
+      optionC: "",
+      optionD: "",
+      correctAnswer: "A",
+      explanation: "",
     });
-    toast.info('Changes discarded');
+    toast.info("Changes discarded");
   };
 
   const handleSaveEdit = async (topicId: string) => {
@@ -353,24 +379,85 @@ export default function CourseQuizzesTab({
     setHasUnsavedChanges(false);
   };
 
-  const handleCancelEdit = () => {
-    if (hasUnsavedChanges && !confirm('Are you sure you want to discard your changes?')) {
+  const handleCreateNewQuiz = () => {
+    setShowCreateQuizModal(true);
+  };
+
+  const handleCreateQuizTopic = async () => {
+    if (!user?.email || !newQuizTopicName.trim()) {
+      toast.error("Quiz topic name is required");
       return;
     }
-    
+
+    if (!confirm(`Create new quiz topic: "${newQuizTopicName}"?`)) {
+      return;
+    }
+
+    try {
+      setCreatingQuizTopic(true);
+      const response = await createQuizTopic({
+        courseId: course.id,
+        topicName: newQuizTopicName.trim(),
+        userEmail: user.email,
+      });
+
+      if ("topic" in response && response.topic) {
+        toast.success("Quiz topic created successfully!");
+
+        // Add the new topic to the quizzes list
+        const newTopic: QuizTopic = {
+          ...response.topic,
+          question_count: 0,
+        };
+        setQuizzes((prev) => [...prev, newTopic]);
+
+        // Update course quiz count
+        const updatedCourse = {
+          ...course,
+          quizzesCount: course.quizzesCount + 1,
+        };
+        onUpdateCourse(updatedCourse);
+
+        // Reset form and close modal
+        setNewQuizTopicName("");
+        setShowCreateQuizModal(false);
+
+        // Optionally, open the new quiz for editing
+        setTimeout(() => {
+          handleEditTopic(newTopic);
+        }, 500);
+      } else {
+        toast.error("Failed to create quiz topic");
+      }
+    } catch (error) {
+      console.error("Error creating quiz topic:", error);
+      toast.error("Failed to create quiz topic");
+    } finally {
+      setCreatingQuizTopic(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (
+      hasUnsavedChanges &&
+      !confirm("Are you sure you want to discard your changes?")
+    ) {
+      return;
+    }
+
     setEditingTopicId(null);
     setEditingQuiz(null);
     setOriginalQuiz(null);
     setCreatingNewQuestion(false);
     setHasUnsavedChanges(false);
     setNewQuestion({
-      text: '',
-      optionA: '',
-      optionB: '',
-      optionC: '',
-      optionD: '',
-      correctAnswer: 'A',
-      explanation: ''
+      text: "",
+      optionA: "",
+      optionB: "",
+      optionC: "",
+      optionD: "",
+      correctAnswer: "A",
+      explanation: "",
     });
   };
 
@@ -433,7 +520,11 @@ export default function CourseQuizzesTab({
 
   return (
     <div className="p-6">
-      <div className={`max-w-6xl mx-auto transition-all duration-300 ${showAddQuestionModal ? 'blur-sm' : ''}`}>
+      <div
+        className={`max-w-6xl mx-auto transition-all duration-300 ${
+          showAddQuestionModal || showCreateQuizModal ? "blur-sm" : ""
+        }`}
+      >
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-2">
@@ -445,7 +536,10 @@ export default function CourseQuizzesTab({
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           </div>
           <div className="flex items-center space-x-2">
-            <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+            <Button
+              onClick={handleCreateNewQuiz}
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+            >
               <Plus className="w-4 h-4 mr-2" />
               Create New Quiz
             </Button>
@@ -461,14 +555,21 @@ export default function CourseQuizzesTab({
                   type="text"
                   value={editingQuiz.topic_name}
                   onChange={(e) => {
-                    setEditingQuiz(prev => prev ? { ...prev, topic_name: e.target.value } : null);
+                    setEditingQuiz((prev) =>
+                      prev ? { ...prev, topic_name: e.target.value } : null
+                    );
                     setHasUnsavedChanges(true);
                   }}
                   className="text-2xl font-bold bg-transparent border-none outline-none focus:bg-background focus:border focus:border-border rounded px-2 py-1 w-full"
                 />
                 <p className="text-muted-foreground mt-2">
-                  {editingQuiz.questions.length} questions • Created {formatDate(editingQuiz.created_at)}
-                  {hasUnsavedChanges && <span className="text-orange-500 ml-2">• Unsaved changes</span>}
+                  {editingQuiz.questions.length} questions • Created{" "}
+                  {formatDate(editingQuiz.created_at)}
+                  {hasUnsavedChanges && (
+                    <span className="text-orange-500 ml-2">
+                      • Unsaved changes
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -477,7 +578,7 @@ export default function CourseQuizzesTab({
             <div className="sticky top-0 z-10 bg-card border-b border-border px-6 py-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Button 
+                  <Button
                     onClick={handleCreateQuestion}
                     disabled={loading}
                     className="bg-green-500 hover:bg-green-600 text-white"
@@ -487,14 +588,14 @@ export default function CourseQuizzesTab({
                   </Button>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={handleCancelChanges}
                     disabled={loading}
                   >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleSaveChanges}
                     disabled={!hasUnsavedChanges || loading}
                     className="bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50"
@@ -505,7 +606,7 @@ export default function CourseQuizzesTab({
                         Saving...
                       </>
                     ) : (
-                      'Save Changes'
+                      "Save Changes"
                     )}
                   </Button>
                 </div>
@@ -515,11 +616,14 @@ export default function CourseQuizzesTab({
             {/* Questions List */}
             <div className="p-6 space-y-6">
               {editingQuiz.questions.map((question, index) => (
-                <div key={question.id} className="border border-border rounded-lg p-4">
+                <div
+                  key={question.id}
+                  className="border border-border rounded-lg p-4"
+                >
                   <div className="flex items-start justify-between mb-4">
                     <h4 className="font-medium text-foreground flex items-center gap-2">
                       Question {index + 1}
-                      {question.id.startsWith('temp-') && (
+                      {question.id.startsWith("temp-") && (
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
                           New
                         </span>
@@ -535,7 +639,7 @@ export default function CourseQuizzesTab({
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                  
+
                   {/* Question Text */}
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-muted-foreground mb-2">
@@ -544,13 +648,15 @@ export default function CourseQuizzesTab({
                     <textarea
                       value={question.question_text}
                       onChange={(e) => {
-                        setEditingQuiz(prev => {
+                        setEditingQuiz((prev) => {
                           if (!prev) return null;
                           return {
                             ...prev,
-                            questions: prev.questions.map(q => 
-                              q.id === question.id ? { ...q, question_text: e.target.value } : q
-                            )
+                            questions: prev.questions.map((q) =>
+                              q.id === question.id
+                                ? { ...q, question_text: e.target.value }
+                                : q
+                            ),
                           };
                         });
                         setHasUnsavedChanges(true);
@@ -562,10 +668,11 @@ export default function CourseQuizzesTab({
 
                   {/* Options */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {['A', 'B', 'C', 'D'].map((option) => {
-                      const optionKey = `option_${option.toLowerCase()}` as keyof QuizQuestion;
+                    {["A", "B", "C", "D"].map((option) => {
+                      const optionKey =
+                        `option_${option.toLowerCase()}` as keyof QuizQuestion;
                       const isCorrect = question.correct_answer === option;
-                      
+
                       return (
                         <div key={option} className="space-y-2">
                           <div className="flex items-center space-x-2">
@@ -577,7 +684,9 @@ export default function CourseQuizzesTab({
                               name={`correct-${question.id}`}
                               checked={isCorrect}
                               onChange={() => {
-                                handleUpdateQuestion(question.id, { correct_answer: option });
+                                handleUpdateQuestion(question.id, {
+                                  correct_answer: option,
+                                });
                                 setHasUnsavedChanges(true);
                               }}
                               className="text-green-600"
@@ -590,13 +699,15 @@ export default function CourseQuizzesTab({
                             type="text"
                             value={question[optionKey] as string}
                             onChange={(e) => {
-                              setEditingQuiz(prev => {
+                              setEditingQuiz((prev) => {
                                 if (!prev) return null;
                                 return {
                                   ...prev,
-                                  questions: prev.questions.map(q => 
-                                    q.id === question.id ? { ...q, [optionKey]: e.target.value } : q
-                                  )
+                                  questions: prev.questions.map((q) =>
+                                    q.id === question.id
+                                      ? { ...q, [optionKey]: e.target.value }
+                                      : q
+                                  ),
                                 };
                               });
                               setHasUnsavedChanges(true);
@@ -616,13 +727,15 @@ export default function CourseQuizzesTab({
                     <textarea
                       value={question.explanation}
                       onChange={(e) => {
-                        setEditingQuiz(prev => {
+                        setEditingQuiz((prev) => {
                           if (!prev) return null;
                           return {
                             ...prev,
-                            questions: prev.questions.map(q => 
-                              q.id === question.id ? { ...q, explanation: e.target.value } : q
-                            )
+                            questions: prev.questions.map((q) =>
+                              q.id === question.id
+                                ? { ...q, explanation: e.target.value }
+                                : q
+                            ),
                           };
                         });
                         setHasUnsavedChanges(true);
@@ -672,9 +785,9 @@ export default function CourseQuizzesTab({
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-8 px-2"
                       onClick={() => handleEditTopic(quiz)}
                       disabled={editingTopicId === quiz.id}
@@ -686,7 +799,10 @@ export default function CourseQuizzesTab({
                       size="sm"
                       className="h-8 px-2 text-red-500 hover:text-red-700"
                       onClick={() => handleDeleteTopic(quiz.id)}
-                      disabled={deletingTopicId === quiz.id || editingTopicId === quiz.id}
+                      disabled={
+                        deletingTopicId === quiz.id ||
+                        editingTopicId === quiz.id
+                      }
                     >
                       {deletingTopicId === quiz.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -751,19 +867,19 @@ export default function CourseQuizzesTab({
 
       {/* Add Question Modal */}
       {showAddQuestionModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setShowAddQuestionModal(false);
               setNewQuestion({
-                text: '',
-                optionA: '',
-                optionB: '',
-                optionC: '',
-                optionD: '',
-                correctAnswer: 'A',
-                explanation: ''
+                text: "",
+                optionA: "",
+                optionB: "",
+                optionC: "",
+                optionD: "",
+                correctAnswer: "A",
+                explanation: "",
               });
             }
           }}
@@ -777,13 +893,13 @@ export default function CourseQuizzesTab({
                 onClick={() => {
                   setShowAddQuestionModal(false);
                   setNewQuestion({
-                    text: '',
-                    optionA: '',
-                    optionB: '',
-                    optionC: '',
-                    optionD: '',
-                    correctAnswer: 'A',
-                    explanation: ''
+                    text: "",
+                    optionA: "",
+                    optionB: "",
+                    optionC: "",
+                    optionD: "",
+                    correctAnswer: "A",
+                    explanation: "",
                   });
                 }}
                 className="hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -800,24 +916,34 @@ export default function CourseQuizzesTab({
                 </label>
                 <textarea
                   value={newQuestion.text}
-                  onChange={(e) => setNewQuestion(prev => ({ ...prev, text: e.target.value }))}
+                  onChange={(e) =>
+                    setNewQuestion((prev) => ({
+                      ...prev,
+                      text: e.target.value,
+                    }))
+                  }
                   className={`w-full px-3 py-2 border rounded bg-background text-foreground resize-none text-sm ${
-                    !newQuestion.text.trim() ? 'border-red-300' : 'border-border'
+                    !newQuestion.text.trim()
+                      ? "border-red-300"
+                      : "border-border"
                   }`}
                   rows={2}
                   placeholder="Enter your question here..."
                 />
                 {!newQuestion.text.trim() && (
-                  <p className="text-red-500 text-xs mt-1">Question text is required</p>
+                  <p className="text-red-500 text-xs mt-1">
+                    Question text is required
+                  </p>
                 )}
               </div>
 
               {/* Options */}
               <div className="space-y-3">
-                {['A', 'B', 'C', 'D'].map((option) => {
-                  const optionKey = `option${option}` as keyof typeof newQuestion;
+                {["A", "B", "C", "D"].map((option) => {
+                  const optionKey =
+                    `option${option}` as keyof typeof newQuestion;
                   const isCorrect = newQuestion.correctAnswer === option;
-                  
+
                   return (
                     <div key={option} className="space-y-1">
                       <div className="flex items-center space-x-2">
@@ -825,7 +951,12 @@ export default function CourseQuizzesTab({
                           type="radio"
                           name="correct-answer"
                           checked={isCorrect}
-                          onChange={() => setNewQuestion(prev => ({ ...prev, correctAnswer: option as 'A' | 'B' | 'C' | 'D' }))}
+                          onChange={() =>
+                            setNewQuestion((prev) => ({
+                              ...prev,
+                              correctAnswer: option as "A" | "B" | "C" | "D",
+                            }))
+                          }
                           className="text-green-600"
                         />
                         <label className="text-sm font-medium text-muted-foreground">
@@ -835,7 +966,12 @@ export default function CourseQuizzesTab({
                       <input
                         type="text"
                         value={newQuestion[optionKey]}
-                        onChange={(e) => setNewQuestion(prev => ({ ...prev, [optionKey]: e.target.value }))}
+                        onChange={(e) =>
+                          setNewQuestion((prev) => ({
+                            ...prev,
+                            [optionKey]: e.target.value,
+                          }))
+                        }
                         className="w-full px-3 py-2 border border-border rounded bg-background text-foreground text-sm"
                         placeholder={`Enter option ${option}...`}
                       />
@@ -851,7 +987,12 @@ export default function CourseQuizzesTab({
                 </label>
                 <textarea
                   value={newQuestion.explanation}
-                  onChange={(e) => setNewQuestion(prev => ({ ...prev, explanation: e.target.value }))}
+                  onChange={(e) =>
+                    setNewQuestion((prev) => ({
+                      ...prev,
+                      explanation: e.target.value,
+                    }))
+                  }
                   className="w-full px-3 py-2 border border-border rounded bg-background text-foreground resize-none text-sm"
                   rows={2}
                   placeholder="Explain why this is the correct answer..."
@@ -865,13 +1006,13 @@ export default function CourseQuizzesTab({
                 onClick={() => {
                   setShowAddQuestionModal(false);
                   setNewQuestion({
-                    text: '',
-                    optionA: '',
-                    optionB: '',
-                    optionC: '',
-                    optionD: '',
-                    correctAnswer: 'A',
-                    explanation: ''
+                    text: "",
+                    optionA: "",
+                    optionB: "",
+                    optionC: "",
+                    optionD: "",
+                    correctAnswer: "A",
+                    explanation: "",
                   });
                 }}
               >
@@ -883,6 +1024,99 @@ export default function CourseQuizzesTab({
                 className="bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Question
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create New Quiz Modal */}
+      {showCreateQuizModal && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowCreateQuizModal(false);
+              setNewQuizTopicName("");
+            }
+          }}
+        >
+          <div className="bg-white/95 dark:bg-card/95 backdrop-blur-md rounded-lg p-6 w-full max-w-md shadow-2xl border border-white/20 animate-in slide-in-from-bottom-4 zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">Create New Quiz</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowCreateQuizModal(false);
+                  setNewQuizTopicName("");
+                }}
+                className="hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                  Quiz Topic Name *
+                </label>
+                <input
+                  type="text"
+                  value={newQuizTopicName}
+                  onChange={(e) => setNewQuizTopicName(e.target.value)}
+                  className={`w-full px-3 py-2 border rounded bg-background text-foreground text-sm ${
+                    !newQuizTopicName.trim()
+                      ? "border-red-300"
+                      : "border-border"
+                  }`}
+                  placeholder="Enter quiz topic name..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newQuizTopicName.trim()) {
+                      handleCreateQuizTopic();
+                    }
+                  }}
+                />
+                {!newQuizTopicName.trim() && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Topic name is required
+                  </p>
+                )}
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                <p>
+                  This will create an empty quiz topic. You can add questions
+                  after creation.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCreateQuizModal(false);
+                  setNewQuizTopicName("");
+                }}
+                disabled={creatingQuizTopic}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateQuizTopic}
+                disabled={!newQuizTopicName.trim() || creatingQuizTopic}
+                className="bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {creatingQuizTopic ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Quiz"
+                )}
               </Button>
             </div>
           </div>

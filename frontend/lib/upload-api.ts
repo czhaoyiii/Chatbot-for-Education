@@ -316,7 +316,10 @@ export async function updateQuizTopic(params: {
 export async function getQuizTopicDetails(params: {
   courseId: string;
   topicId: string;
-}): Promise<{ success: boolean; topic: QuizTopic & { questions: QuizQuestion[] } } | UploadError> {
+}): Promise<
+  | { success: boolean; topic: QuizTopic & { questions: QuizQuestion[] } }
+  | UploadError
+> {
   try {
     const { courseId, topicId } = params;
     const backendUrl =
@@ -331,7 +334,10 @@ export async function getQuizTopicDetails(params: {
         data.detail || data.error || "Failed to get quiz details"
       );
     }
-    return data as { success: boolean; topic: QuizTopic & { questions: QuizQuestion[] } };
+    return data as {
+      success: boolean;
+      topic: QuizTopic & { questions: QuizQuestion[] };
+    };
   } catch (error) {
     console.error("Get quiz details API error:", error);
     return {
@@ -352,14 +358,17 @@ export async function updateQuizQuestion(params: {
     const { courseId, topicId, questionId, question, userEmail } = params;
     const formData = new FormData();
     formData.append("user_email", userEmail);
-    
-    if (question.question_text) formData.append("question_text", question.question_text);
+
+    if (question.question_text)
+      formData.append("question_text", question.question_text);
     if (question.option_a) formData.append("option_a", question.option_a);
     if (question.option_b) formData.append("option_b", question.option_b);
     if (question.option_c) formData.append("option_c", question.option_c);
     if (question.option_d) formData.append("option_d", question.option_d);
-    if (question.correct_answer) formData.append("correct_answer", question.correct_answer);
-    if (question.explanation) formData.append("explanation", question.explanation);
+    if (question.correct_answer)
+      formData.append("correct_answer", question.correct_answer);
+    if (question.explanation)
+      formData.append("explanation", question.explanation);
 
     const backendUrl =
       process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
@@ -400,7 +409,9 @@ export async function createQuizQuestion(params: {
     explanation: string;
   };
   userEmail: string;
-}): Promise<{ success: boolean; question?: QuizQuestion; message?: string } | UploadError> {
+}): Promise<
+  { success: boolean; question?: QuizQuestion; message?: string } | UploadError
+> {
   try {
     const { courseId, topicId, question, userEmail } = params;
     const formData = new FormData();
@@ -429,7 +440,11 @@ export async function createQuizQuestion(params: {
         data.detail || data.error || "Failed to create quiz question"
       );
     }
-    return data as { success: boolean; question?: QuizQuestion; message?: string };
+    return data as {
+      success: boolean;
+      question?: QuizQuestion;
+      message?: string;
+    };
   } catch (error) {
     console.error("Create quiz question API error:", error);
     return {
@@ -469,6 +484,42 @@ export async function deleteQuizQuestion(params: {
     return data as { success: boolean; message?: string };
   } catch (error) {
     console.error("Delete quiz question API error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+export async function createQuizTopic(params: {
+  courseId: string;
+  topicName: string;
+  userEmail: string;
+}): Promise<
+  { success: boolean; topic?: QuizTopic; message?: string } | UploadError
+> {
+  try {
+    const { courseId, topicName, userEmail } = params;
+    const formData = new FormData();
+    formData.append("topic_name", topicName);
+    formData.append("user_email", userEmail);
+
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+    const response = await fetch(`${backendUrl}/courses/${courseId}/quizzes`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(
+        data.detail || data.error || "Failed to create quiz topic"
+      );
+    }
+    return data as { success: boolean; topic?: QuizTopic; message?: string };
+  } catch (error) {
+    console.error("Create quiz topic API error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred",

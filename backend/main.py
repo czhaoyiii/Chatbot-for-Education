@@ -2,6 +2,7 @@ import os
 import tempfile
 import shutil
 from pathlib import Path
+from datetime import datetime
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
@@ -199,6 +200,51 @@ async def get_course_quizzes_route(course_id: str):
     Get all quiz topics and questions for a course
     """
     return await get_course_quizzes(course_id)
+
+
+@app.post("/courses/{course_id}/quizzes")
+async def create_quiz_topic_route(
+    course_id: str,
+    topic_name: str = Form(...),
+    user_email: str = Form(...),
+):
+    """
+    Create a new empty quiz topic
+    """
+    try:
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"]
+        )
+        
+        # Verify user has permission (course owner)
+        user_res = supabase_client.table("users").select("id").eq("email", user_email).execute()
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        user_id = user_res.data[0]["id"]
+        
+        course_res = supabase_client.table("courses").select("created_by").eq("id", course_id).execute()
+        if not course_res.data or course_res.data[0]["created_by"] != user_id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        
+        # Create new quiz topic
+        topic_data = {
+            "course_id": course_id,
+            "topic_name": topic_name.strip(),
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        create_res = supabase_client.table("quiz_topics").insert(topic_data).execute()
+        
+        if not create_res.data:
+            raise HTTPException(status_code=500, detail="Failed to create quiz topic")
+        
+        return {"success": True, "topic": create_res.data[0], "message": "Quiz topic created successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating quiz topic: {str(e)}")
 
 
 @app.post("/courses/{course_id}/generate-quiz")
