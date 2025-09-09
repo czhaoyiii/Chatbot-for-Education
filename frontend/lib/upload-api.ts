@@ -12,6 +12,7 @@ interface UploadResponse {
 interface UploadError {
   success: false;
   error: string;
+  errorType?: "DUPLICATE_CODE" | "DUPLICATE_NAME" | "VALIDATION_ERROR";
 }
 
 export async function uploadFiles(
@@ -104,9 +105,40 @@ export async function createCourseWithFiles(params: {
     return data as CreateCourseResponse;
   } catch (error) {
     console.error("Create course API error:", error);
+
+    // Parse specific database errors
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+
+    // Handle duplicate course code error
+    if (
+      errorMessage.includes("duplicate key value violates unique constraint") &&
+      errorMessage.includes("courses_code_key")
+    ) {
+      return {
+        success: false,
+        error:
+          "This course code already exists. Please use a different course code.",
+        errorType: "DUPLICATE_CODE",
+      };
+    }
+
+    // Handle duplicate course name error
+    if (
+      errorMessage.includes("duplicate key value violates unique constraint") &&
+      errorMessage.includes("courses_name_key")
+    ) {
+      return {
+        success: false,
+        error:
+          "This course name already exists. Please use a different course name.",
+        errorType: "DUPLICATE_NAME",
+      };
+    }
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred",
+      error: errorMessage,
     };
   }
 }

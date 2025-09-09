@@ -127,18 +127,67 @@ export default function CreateCourseForm({
           "error" in result ? result.error : "Failed to create course.";
         setUploadStatus("error");
         setUploadMessage(errMsg);
-        setErrors((prev) => ({
-          ...prev,
-          files: errMsg,
-        }));
+
+        // Handle specific error types
+        if ("errorType" in result && result.errorType === "DUPLICATE_CODE") {
+          setErrors((prev) => ({
+            ...prev,
+            code: "This course code already exists. Please use a different course code.",
+          }));
+          setUploadStatus("idle"); // Clear the general error status
+          setUploadMessage(""); // Clear the general error message
+        } else if (
+          "errorType" in result &&
+          result.errorType === "DUPLICATE_NAME"
+        ) {
+          setErrors((prev) => ({
+            ...prev,
+            name: "This course name already exists. Please use a different course name.",
+          }));
+          setUploadStatus("idle"); // Clear the general error status
+          setUploadMessage(""); // Clear the general error message
+        } else {
+          setErrors((prev) => ({
+            ...prev,
+            files: errMsg,
+          }));
+        }
       }
     } catch (error) {
       setUploadStatus("error");
       const errorMessage = `An unexpected error occurred: ${
         error instanceof Error ? error.message : String(error)
       }`;
-      setUploadMessage(errorMessage);
-      setErrors((prev) => ({ ...prev, files: errorMessage }));
+
+      // Check if it's a duplicate course code error
+      if (
+        errorMessage.includes(
+          "duplicate key value violates unique constraint"
+        ) &&
+        errorMessage.includes("courses_code_key")
+      ) {
+        setErrors((prev) => ({
+          ...prev,
+          code: "This course code already exists. Please use a different course code.",
+        }));
+        setUploadStatus("idle");
+        setUploadMessage("");
+      } else if (
+        errorMessage.includes(
+          "duplicate key value violates unique constraint"
+        ) &&
+        errorMessage.includes("courses_name_key")
+      ) {
+        setErrors((prev) => ({
+          ...prev,
+          name: "This course name already exists. Please use a different course name.",
+        }));
+        setUploadStatus("idle");
+        setUploadMessage("");
+      } else {
+        setUploadMessage(errorMessage);
+        setErrors((prev) => ({ ...prev, files: errorMessage }));
+      }
     } finally {
       setIsUploading(false);
     }

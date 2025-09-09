@@ -11,7 +11,11 @@ import {
   ArrowLeft,
   ChevronDown,
 } from "lucide-react";
-import { getCourseQuizzes, type QuizQuestion as APIQuizQuestion, type QuizTopic } from "@/lib/upload-api";
+import {
+  getCourseQuizzes,
+  type QuizQuestion as APIQuizQuestion,
+  type QuizTopic,
+} from "@/lib/upload-api";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
@@ -73,14 +77,20 @@ export default function QuizInterface({
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
-          <p className="text-muted-foreground">Please log in to access quizzes.</p>
+          <p className="text-muted-foreground">
+            Please log in to access quizzes.
+          </p>
         </div>
       </div>
     );
   }
 
   // Transform API quiz question to interface format
-  const transformQuizQuestion = (apiQuestion: APIQuizQuestion, topic: QuizTopic, course: Course): QuizQuestion => ({
+  const transformQuizQuestion = (
+    apiQuestion: APIQuizQuestion,
+    topic: QuizTopic,
+    course: Course
+  ): QuizQuestion => ({
     id: apiQuestion.id,
     courseId: course.id,
     courseCode: course.code,
@@ -103,7 +113,6 @@ export default function QuizInterface({
         const { data, error } = await supabase
           .from("courses")
           .select("id, code, name")
-          .eq("created_by", user.id)
           .order("code", { ascending: true });
 
         if (error) throw error;
@@ -132,7 +141,9 @@ export default function QuizInterface({
         const response = await getCourseQuizzes(selectedCourseId);
         if (response.success) {
           setAvailableTopics(response.topics);
-          setSelectedTopic(response.topics.length > 0 ? response.topics[0].topic_name : "");
+          setSelectedTopic(
+            response.topics.length > 0 ? response.topics[0].topic_name : ""
+          );
         } else {
           setError("Failed to load quiz topics");
           setAvailableTopics([]);
@@ -163,17 +174,21 @@ export default function QuizInterface({
   const handleStartQuiz = () => {
     if (!selectedCourseId || !selectedTopic) return;
 
-    const selectedTopicData = availableTopics.find(topic => topic.topic_name === selectedTopic);
+    const selectedTopicData = availableTopics.find(
+      (topic) => topic.topic_name === selectedTopic
+    );
     if (!selectedTopicData || selectedTopicData.questions.length === 0) {
       setError("No questions available for this topic");
       return;
     }
 
-    const selectedCourse = courses.find(course => course.id === selectedCourseId);
+    const selectedCourse = courses.find(
+      (course) => course.id === selectedCourseId
+    );
     if (!selectedCourse) return;
 
     // Transform API questions to interface format
-    const transformedQuestions = selectedTopicData.questions.map(q => 
+    const transformedQuestions = selectedTopicData.questions.map((q) =>
       transformQuizQuestion(q, selectedTopicData, selectedCourse)
     );
 
@@ -218,7 +233,7 @@ export default function QuizInterface({
     setSelectedAnswer(null);
     setShowResult(false);
     setScore(0);
-    
+
     // Keep current questions and restart the quiz
     if (questions.length > 0) {
       setQuizState("active");
@@ -251,7 +266,9 @@ export default function QuizInterface({
 
   const getQuestionCount = () => {
     if (!selectedTopic || !selectedCourseId) return 0;
-    const selectedTopicData = availableTopics.find(topic => topic.topic_name === selectedTopic);
+    const selectedTopicData = availableTopics.find(
+      (topic) => topic.topic_name === selectedTopic
+    );
     if (!selectedTopicData) return 0;
     return Math.min(20, selectedTopicData.questions.length);
   };
@@ -289,7 +306,9 @@ export default function QuizInterface({
                   }}
                 >
                   {selectedCourseId
-                    ? `${getSelectedCourseInfo()?.code} - ${getSelectedCourseInfo()?.name}`
+                    ? `${getSelectedCourseInfo()?.code} - ${
+                        getSelectedCourseInfo()?.name
+                      }`
                     : "Choose a course..."}
                   <ChevronDown className="w-5 h-5 ml-2" />
                 </Button>
@@ -321,9 +340,7 @@ export default function QuizInterface({
               )}
 
               {error && (
-                <div className="mb-6 text-center text-red-500">
-                  {error}
-                </div>
+                <div className="mb-6 text-center text-red-500">{error}</div>
               )}
 
               {selectedCourseId && availableTopics.length === 0 && !loading && (
@@ -369,7 +386,11 @@ export default function QuizInterface({
               {/* Start Quiz Button */}
               <Button
                 onClick={handleStartQuiz}
-                disabled={!selectedCourseId || !selectedTopic || availableTopics.length === 0}
+                disabled={
+                  !selectedCourseId ||
+                  !selectedTopic ||
+                  availableTopics.length === 0
+                }
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white h-12 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Start Quiz (20 Questions)
@@ -613,7 +634,8 @@ export default function QuizInterface({
               Are you sure you want to quit?
             </h3>
             <p className="text-muted-foreground mb-6">
-              Your progress will be lost and you'll return to the quiz selection page.
+              Your progress will be lost and you'll return to the quiz selection
+              page.
             </p>
             <div className="flex justify-end space-x-3">
               <Button

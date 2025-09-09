@@ -102,6 +102,48 @@ export default function LoginPage() {
     }
   };
 
+  const handleOtpPaste = (e: React.ClipboardEvent, currentIndex: number) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").trim();
+
+    // Check if pasted data contains only digits
+    if (!/^\d+$/.test(pastedData)) {
+      return; // Only allow numeric data
+    }
+
+    const newOtp = [...otp];
+    const digits = pastedData.split("");
+
+    // Fill from current position onwards
+    for (let i = 0; i < digits.length && currentIndex + i < 6; i++) {
+      newOtp[currentIndex + i] = digits[i];
+    }
+
+    setOtp(newOtp);
+
+    // Focus the next empty input or the last filled input
+    const nextEmptyIndex = newOtp.findIndex(
+      (digit, index) => index > currentIndex && digit === ""
+    );
+    const targetIndex =
+      nextEmptyIndex !== -1
+        ? nextEmptyIndex
+        : Math.min(currentIndex + digits.length, 5);
+
+    setTimeout(() => {
+      const targetInput = document.getElementById(`otp-${targetIndex}`);
+      targetInput?.focus();
+    }, 10);
+
+    // Auto-submit if all 6 digits are filled
+    const finalOtp = newOtp.join("");
+    if (finalOtp.length === 6) {
+      setTimeout(() => {
+        handleOtpVerification(finalOtp);
+      }, 100);
+    }
+  };
+
   // Extract OTP verification logic into separate function
   const handleOtpVerification = async (otpCode: string) => {
     setIsLoading(true);
@@ -280,6 +322,7 @@ export default function LoginPage() {
                         value={digit}
                         onChange={(e) => handleOtpChange(index, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                        onPaste={(e) => handleOtpPaste(e, index)}
                         className="w-12 h-12 text-center text-lg font-semibold bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-blue-500"
                       />
                     ))}
