@@ -4,8 +4,13 @@ import ChatInterface from "@/components/chat/chat-interface";
 import { useChatLayout } from "../layout";
 
 export default function ChatPage() {
-  const { chats, selectedChat, handleUpdateChat, isLoadingHistory } =
-    useChatLayout();
+  const {
+    chats,
+    selectedChat,
+    handleUpdateChat,
+    isLoadingHistory,
+    refreshChatList,
+  } = useChatLayout();
 
   return (
     <ChatInterface
@@ -13,6 +18,7 @@ export default function ChatPage() {
       selectedChat={selectedChat}
       onUpdateChat={handleUpdateChat}
       isLoadingHistory={isLoadingHistory}
+      refreshChatList={refreshChatList}
     />
   );
 }

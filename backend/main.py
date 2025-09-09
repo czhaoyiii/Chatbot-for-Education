@@ -1,6 +1,8 @@
 import os
 import tempfile
 import shutil
+import asyncio
+from functools import partial
 from pathlib import Path
 from datetime import datetime
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
@@ -30,6 +32,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def sync_course_quiz_counts():
+    """
+    Helper function to sync quiz counts for all courses based on actual quiz_topics count
+    """
+    try:
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"]
+        )
+        
+        # Get all courses
+        courses_result = supabase_client.table("courses").select("id").execute()
+        
+        if courses_result.data:
+            for course in courses_result.data:
+                course_id = course["id"]
+                
+                # Count actual quiz topics for this course
+                quiz_count_result = supabase_client.table("quiz_topics").select("id", count="exact").eq("course_id", course_id).execute()
+                actual_count = quiz_count_result.count if quiz_count_result.count is not None else 0
+                
+                # Update the course with correct count
+                supabase_client.table("courses").update({"quizzes_count": actual_count}).eq("id", course_id).execute()
+                
+        return {"success": True, "message": "Quiz counts synced"}
+    except Exception as e:
+        print(f"Error syncing quiz counts: {e}")
+        return {"success": False, "error": str(e)}
+
 @app.get("/")
 async def root():
     return {"message": "success"}
@@ -41,67 +72,6 @@ async def user_management(request: UserLoginRequest):
     or return existing user (preserving admin-assigned Professor role)
     """
     return await login_user(request)
-
-@app.post("/upload-files")
-async def upload_files(files: List[UploadFile] = File(...)):
-    """
-    Upload multiple files and process them for ingestion into the vector database
-    """
-    try:
-        # Create a temporary directory for uploaded files
-        temp_dir = Path(tempfile.mkdtemp())
-        uploaded_files = []
-        
-        # Save uploaded files to temporary directory
-        for file in files:
-            # Validate file type
-            if not file.filename.lower().endswith(('.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt')):
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Unsupported file type: {file.filename}. Supported types: PDF, DOC, DOCX, PPT, PPTX, TXT"
-                )
-            
-            # Check file size (10MB limit)
-            file_content = await file.read()
-            if len(file_content) > 10 * 1024 * 1024:  # 10MB in bytes
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"File {file.filename} is too large. Maximum size is 10MB."
-                )
-            
-            # Save file to temporary directory
-            file_path = temp_dir / file.filename
-            with open(file_path, "wb") as buffer:
-                buffer.write(file_content)
-            
-            uploaded_files.append({
-                "filename": file.filename,
-                "path": str(file_path),
-                "size": len(file_content)
-            })
-        
-        # Process the uploaded files
-        result = files_upload(temp_dir)
-        
-        # Clean up temporary directory
-        shutil.rmtree(temp_dir)
-        
-        return {
-            "success": True,
-            "message": f"Successfully processed {len(uploaded_files)} files",
-            "files": uploaded_files,
-            "ingestion_result": result
-        }
-        
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except Exception as e:
-        # Clean up temporary directory in case of error
-        if 'temp_dir' in locals():
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        
-        raise HTTPException(status_code=500, detail=f"Error processing files: {str(e)}")
 
 # @app.get("/ingestion")
 # async def ingestion():
@@ -127,11 +97,128 @@ async def create_course_route(
     user_email: str = Form(...),
     files: List[UploadFile] = File(...),
 ):
-    # Delegate to service function for modularity
-    return await create_course(
-        code=code, name=name, user_email=user_email, files=files
-    )
+    """
+    Create a new course and process files synchronously to ensure completion
+    """
+    temp_dir = None
+    try:
+        # Initialize Supabase client
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_KEY"],
+        )
 
+        # Resolve user by email to get UUID
+        user_res = (
+            supabase_client.table("users").select("id").eq("email", user_email).execute()
+        )
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="User not found for provided email")
+        user_id = user_res.data[0]["id"]
+
+        # Create course record first (but files_count will be updated after successful ingestion)
+        try:
+            course_insert = {
+                "code": code,
+                "name": name,
+                "created_by": user_id,
+                "files_count": 0,  # Will be updated after successful ingestion
+                "quizzes_count": 0,
+            }
+            course_res = supabase_client.table("courses").insert(course_insert).execute()
+            if not course_res.data:
+                raise HTTPException(status_code=500, detail="Failed to create course")
+            course = course_res.data[0]
+            course_id = course["id"]
+        except Exception as e:
+            if "duplicate key value violates unique constraint" in str(e):
+                if "courses_code_key" in str(e):
+                    raise HTTPException(status_code=400, detail=f"Course code '{code}' already exists")
+                elif "courses_name_key" in str(e):
+                    raise HTTPException(status_code=400, detail=f"Course name '{name}' already exists")
+            raise HTTPException(status_code=500, detail="Failed to create course")
+
+        # Prepare temp directory and files
+        temp_dir = Path(tempfile.mkdtemp())
+        uploaded_files = []
+        filename_to_fileid = {}
+        
+        for file in files:
+            # Validate file
+            if not file.filename.lower().endswith(('.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt')):
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Unsupported file type: {file.filename}"
+                )
+            
+            content = await file.read()
+            if len(content) > 10 * 1024 * 1024:  # 10MB
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File {file.filename} is too large. Maximum size is 10MB."
+                )
+
+            # Save file to temp dir first (don't create DB records until ingestion succeeds)
+            file_path = temp_dir / file.filename
+            with open(file_path, "wb") as f:
+                f.write(content)
+            uploaded_files.append({"filename": file.filename, "size": len(content)})
+
+        # Process files synchronously to ensure completion
+        loop = asyncio.get_event_loop()
+        files_upload_partial = partial(
+            files_upload,
+            course_id=course_id,
+            course_file_ids=None,  # Will be created during ingestion
+            user_email=user_email,
+            generate_quiz=True
+        )
+        
+        ingestion_result = await loop.run_in_executor(
+            None, 
+            files_upload_partial,
+            temp_dir
+        )
+        
+        # Update course files count after successful ingestion
+        final_files_count = len(uploaded_files)
+        supabase_client.table("courses").update({
+            "files_count": final_files_count
+        }).eq("id", course_id).execute()
+
+        # Clean up temporary directory
+        shutil.rmtree(temp_dir)
+        temp_dir = None
+
+        return {
+            "success": True,
+            "message": f"Course created successfully and {len(uploaded_files)} file(s) processed",
+            "course": course,
+            "files": uploaded_files,
+            "ingestion_result": ingestion_result
+        }
+
+    except HTTPException:
+        # Clean up course if it was created but processing failed
+        if 'course_id' in locals():
+            try:
+                supabase_client.table("course_files").delete().eq("course_id", course_id).execute()
+                supabase_client.table("courses").delete().eq("id", course_id).execute()
+            except:
+                pass  # Best effort cleanup
+        raise
+    except Exception as e:
+        # Clean up course if it was created but processing failed
+        if 'course_id' in locals():
+            try:
+                supabase_client.table("course_files").delete().eq("course_id", course_id).execute()
+                supabase_client.table("courses").delete().eq("id", course_id).execute()
+            except:
+                pass  # Best effort cleanup
+        raise HTTPException(status_code=500, detail=f"Error creating course: {str(e)}")
+    finally:
+        if temp_dir and temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 @app.post("/courses/{course_id}/upload")
 async def upload_course_files_route(
@@ -139,7 +226,96 @@ async def upload_course_files_route(
     user_email: str = Form(...),
     files: List[UploadFile] = File(...),
 ):
-    return await upload_course_files(course_id=course_id, user_email=user_email, files=files)
+    """
+    Upload files to an existing course and process synchronously
+    """
+    temp_dir = None
+    try:
+        # Init Supabase client
+        supabase_client = create_client(
+            os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"]
+        )
+
+        # Resolve user ID
+        user_res = (
+            supabase_client.table("users").select("id").eq("email", user_email).execute()
+        )
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="User not found for provided email")
+        user_id = user_res.data[0]["id"]
+
+        # Ensure course exists
+        course_res = (
+            supabase_client.table("courses").select("id, created_by").eq("id", course_id).execute()
+        )
+        if not course_res.data:
+            raise HTTPException(status_code=404, detail="Course not found")
+
+        # Prepare temp dir and files for processing
+        temp_dir = Path(tempfile.mkdtemp())
+        uploaded_files = []
+
+        for file in files:
+            # Validate file
+            if not file.filename.lower().endswith(('.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt')):
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Unsupported file type: {file.filename}"
+                )
+            
+            content = await file.read()
+            if len(content) > 10 * 1024 * 1024:  # 10MB
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File {file.filename} is too large. Maximum size is 10MB."
+                )
+
+            # Save file to temp dir (course_file records will be created during ingestion)
+            file_path = temp_dir / file.filename
+            with open(file_path, "wb") as f:
+                f.write(content)
+            uploaded_files.append({"filename": file.filename, "size": len(content)})
+
+        # Process files synchronously
+        loop = asyncio.get_event_loop()
+        files_upload_partial = partial(
+            files_upload,
+            course_id=course_id,
+            course_file_ids=None,  # Will be created during ingestion
+            user_email=user_email,
+            generate_quiz=True
+        )
+        
+        ingestion_result = await loop.run_in_executor(
+            None, 
+            files_upload_partial,
+            temp_dir
+        )
+
+        # Update course files count
+        total_files = supabase_client.table("course_files").select("id", count="exact").eq("course_id", course_id).execute()
+        files_count = total_files.count if total_files.count else 0
+        supabase_client.table("courses").update({"files_count": files_count}).eq("id", course_id).execute()
+
+        # Clean up temp directory
+        shutil.rmtree(temp_dir)
+        temp_dir = None
+
+        return {
+            "success": True,
+            "message": f"Successfully uploaded and processed {len(uploaded_files)} file(s)",
+            "course": {"id": course_id},
+            "files": uploaded_files,
+            "ingestion_result": ingestion_result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error uploading files: {str(e)}")
+    finally:
+        if temp_dir and temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @app.post("/courses/{course_id}/files/{course_file_id}/delete")
@@ -334,6 +510,20 @@ async def delete_quiz_topic_route(
         
         # Delete topic
         supabase_client.table("quiz_topics").delete().eq("id", topic_id).execute()
+        
+        # Update quiz count in courses table
+        try:
+            # Get current quiz count
+            course_result = supabase_client.table("courses").select("quizzes_count").eq("id", course_id).execute()
+            if course_result.data:
+                current_count = course_result.data[0].get("quizzes_count", 0) or 0
+                new_count = max(0, current_count - 1)  # Ensure count doesn't go below 0
+                
+                # Update the count
+                supabase_client.table("courses").update({"quizzes_count": new_count}).eq("id", course_id).execute()
+        except Exception as e:
+            print(f"Warning: Failed to update quiz count: {e}")
+            # Don't fail the entire operation if count update fails
         
         return {"success": True, "message": "Quiz topic and questions deleted"}
         
@@ -594,3 +784,10 @@ async def delete_quiz_question_route(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting quiz question: {str(e)}")
 
+
+@app.post("/admin/sync-quiz-counts")
+async def sync_quiz_counts_route():
+    """
+    Admin endpoint to sync quiz counts for all courses
+    """
+    return sync_course_quiz_counts()

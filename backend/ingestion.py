@@ -71,6 +71,25 @@ def files_upload(
         
         all_chunks = []
         file_contents = {}  # Store full content for quiz generation
+        actual_course_file_ids = course_file_ids.copy() if course_file_ids else {}
+        
+        # If course_id is provided but course_file_ids are not, create course_file records
+        if course_id and not course_file_ids and user_email:
+            # Get user ID for course_file records
+            user_res = supabase.table("users").select("id").eq("email", user_email).execute()
+            if user_res.data:
+                user_id = user_res.data[0]["id"]
+                
+                for file_path in all_files:
+                    # Create course_file record
+                    cf_insert = {
+                        "course_id": course_id,
+                        "uploaded_by": user_id,
+                        "filename": file_path.name,
+                    }
+                    cf_res = supabase.table("course_files").insert(cf_insert).execute()
+                    if cf_res.data:
+                        actual_course_file_ids[file_path.name] = cf_res.data[0]["id"]
         
         for file_path in all_files:
             result = converter.convert(str(file_path))
@@ -103,8 +122,8 @@ def files_upload(
             # Optionally include course linkage if provided
             if course_id:
                 row["course_id"] = course_id
-            if course_file_ids and chunk.get("filename") in course_file_ids:
-                row["course_file_id"] = course_file_ids[chunk["filename"]]
+            if actual_course_file_ids and chunk.get("filename") in actual_course_file_ids:
+                row["course_file_id"] = actual_course_file_ids[chunk["filename"]]
             supabase.table("ingested_documents").insert(row).execute()
 
         # End time for ingestion
@@ -112,9 +131,24 @@ def files_upload(
         ingestion_message = f"Ingested {len(all_chunks)} chunks from {len(all_files)} files. Time taken: {end - start:.3f}s"
         print(ingestion_message)
         
+        # Generate quizzes if requested and we have the necessary information
+        quiz_generation_result = "Not requested"
+        if generate_quiz and course_id and user_email and file_contents:
+            try:
+                import asyncio
+                quiz_result = asyncio.run(generate_quizzes_for_files(
+                    course_id=course_id,
+                    user_email=user_email,
+                    file_contents=file_contents,
+                    course_file_ids=actual_course_file_ids
+                ))
+                quiz_generation_result = f"Generated quizzes for {quiz_result.get('quizzes_generated', 0)} files"
+            except Exception as e:
+                quiz_generation_result = f"Quiz generation failed: {str(e)}"
+        
         result = {
             "ingestion": ingestion_message,
-            "quiz_generation": "Skipped - will be generated separately",
+            "quiz_generation": quiz_generation_result,
             "file_contents": file_contents if generate_quiz else None
         }
         

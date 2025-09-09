@@ -229,15 +229,38 @@ export default function QuizInterface({
   };
 
   const handleRestartQuiz = () => {
+    if (!selectedCourseId || !selectedTopic) return;
+
+    const selectedTopicData = availableTopics.find(
+      (topic) => topic.topic_name === selectedTopic
+    );
+    if (!selectedTopicData || selectedTopicData.questions.length === 0) {
+      setError("No questions available for this topic");
+      return;
+    }
+
+    const selectedCourse = courses.find(
+      (course) => course.id === selectedCourseId
+    );
+    if (!selectedCourse) return;
+
+    // Transform API questions to interface format
+    const transformedQuestions = selectedTopicData.questions.map((q) =>
+      transformQuizQuestion(q, selectedTopicData, selectedCourse)
+    );
+
+    // Pick a new random set of 20 questions from the full pool
+    const shuffled = [...transformedQuestions].sort(() => 0.5 - Math.random());
+    const newQuizQuestions = shuffled.slice(0, Math.min(20, shuffled.length));
+
+    if (newQuizQuestions.length === 0) return;
+
+    setQuestions(newQuizQuestions);
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setShowResult(false);
     setScore(0);
-
-    // Keep current questions and restart the quiz
-    if (questions.length > 0) {
-      setQuizState("active");
-    }
+    setQuizState("active");
   };
 
   const handleBackToSetup = () => {

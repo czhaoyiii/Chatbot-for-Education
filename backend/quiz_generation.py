@@ -572,6 +572,20 @@ async def save_quiz_to_database(
         
         topic_id = topic_result.data[0]["id"]
         
+        # Update quiz count in courses table
+        try:
+            # Get current quiz count
+            course_result = supabase.table("courses").select("quizzes_count").eq("id", course_id).execute()
+            if course_result.data:
+                current_count = course_result.data[0].get("quizzes_count", 0) or 0
+                new_count = current_count + 1
+                
+                # Update the count
+                supabase.table("courses").update({"quizzes_count": new_count}).eq("id", course_id).execute()
+        except Exception as e:
+            print(f"Warning: Failed to update quiz count: {e}")
+            # Don't fail the entire operation if count update fails
+        
         # Insert quiz questions
         questions_data = []
         for question in quiz_data.questions:

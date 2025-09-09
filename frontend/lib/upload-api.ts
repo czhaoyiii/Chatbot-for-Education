@@ -74,7 +74,8 @@ export interface CreateCourseResponse {
     created_at: string;
   };
   files: Array<{ filename: string; size: number }>;
-  ingestion_result: string;
+  ingestion_result?: string;
+  status?: "processing" | "completed";
 }
 
 export async function createCourseWithFiles(params: {
@@ -148,15 +149,16 @@ export interface UploadToExistingCourseResponse {
   message: string;
   course: {
     id: string;
-    code: string;
-    name: string;
-    created_by: string;
-    files_count: number;
-    quizzes_count: number;
-    created_at: string;
+    code?: string;
+    name?: string;
+    created_by?: string;
+    files_count?: number;
+    quizzes_count?: number;
+    created_at?: string;
   };
   files: Array<{ filename: string; size: number }>;
-  ingestion_result: string;
+  ingestion_result?: string;
+  status?: "processing" | "completed";
 }
 
 export async function uploadFilesToExistingCourse(params: {

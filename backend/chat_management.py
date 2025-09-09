@@ -116,13 +116,22 @@ async def chat_send(payload: ChatSendRequest):
             base_title_parts = [p for p in [course_code, course_name] if p]
             base_title = " - ".join(base_title_parts) if base_title_parts else "Chat"
             title = f"{base_title} - Chat {seq}"
+            current_time = datetime.utcnow().isoformat()
+            session_data = {
+                "user_id": user_id,
+                "course_id": course_id,
+                "title": title,
+            }
+            
+            # Try to add updated_at field, but don't fail if column doesn't exist
+            try:
+                session_data["updated_at"] = current_time
+            except:
+                pass
+                
             screate = (
                 supabase_client.table("chat_sessions")
-                .insert({
-                    "user_id": user_id,
-                    "course_id": course_id,
-                    "title": title,
-                })
+                .insert(session_data)
                 .execute()
             )
             if not screate.data:
@@ -139,6 +148,16 @@ async def chat_send(payload: ChatSendRequest):
             })
             .execute()
         )
+
+        # Update session's updated_at timestamp immediately when user sends message
+        # This makes the session move to top right away, before AI responds
+        try:
+            current_timestamp = datetime.utcnow().isoformat()
+            supabase_client.table("chat_sessions").update({
+                "updated_at": current_timestamp
+            }).eq("id", session_id).execute()
+        except Exception as e:
+            print(f"Warning: Could not update session timestamp: {e}")
 
         # Ensure we have course meta for prompt
         if not course_code or not course_name:
@@ -212,13 +231,42 @@ async def list_chat_sessions(user_id: Optional[str] = None, user_email: Optional
                 raise HTTPException(status_code=404, detail="User not found")
             user_id = ures.data[0]["id"]
 
-        sres = (
-            supabase_client.table("chat_sessions")
-            .select("id, course_id, title, created_at")
-            .eq("user_id", user_id)
-            .order("created_at", desc=True)
-            .execute()
-        )
+        # Fetch chat sessions and handle ordering in Python to properly handle NULL updated_at values
+        try:
+            sres = (
+                supabase_client.table("chat_sessions")
+                .select("id, course_id, title, created_at, updated_at")
+                .eq("user_id", user_id)
+                .execute()
+            )
+            
+            sessions = sres.data or []
+            
+            # Sort sessions in Python: first by updated_at (treating NULL as very old), then by created_at
+            # This ensures sessions with recent activity come first
+            def sort_key(session):
+                # Use updated_at if available, otherwise use created_at
+                sort_time = session.get('updated_at') or session.get('created_at') or '1970-01-01T00:00:00Z'
+                return sort_time
+            
+            sessions.sort(key=sort_key, reverse=True)
+            
+            # Create a mock response object to maintain compatibility
+            class MockResponse:
+                def __init__(self, data):
+                    self.data = data
+            sres = MockResponse(sessions)
+            
+        except Exception as e:
+            print(f"Fallback to created_at ordering due to error: {e}")
+            # Fallback if updated_at column doesn't exist
+            sres = (
+                supabase_client.table("chat_sessions")
+                .select("id, course_id, title, created_at")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .execute()
+            )
         sessions = sres.data or []
         if not sessions:
             return {"success": True, "sessions": []}
@@ -244,6 +292,7 @@ async def list_chat_sessions(user_id: Optional[str] = None, user_email: Optional
                     "id": row["id"],
                     "title": row.get("title"),
                     "created_at": row.get("created_at"),
+                    "updated_at": row.get("updated_at"),
                     "course": course,
                 }
             )

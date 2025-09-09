@@ -22,6 +22,7 @@ type ChatLayoutContextType = {
   selectedChat: Chat | null;
   isLoadingHistory: boolean;
   handleUpdateChat: (chatId: string, messages: Message[]) => void;
+  refreshChatList: () => Promise<void>;
 };
 
 const ChatLayoutContext = createContext<ChatLayoutContextType | undefined>(
@@ -55,41 +56,47 @@ export default function ChatGroupLayout({
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Load sessions for authenticated user
+  const loadSessions = async () => {
+    if (!user?.id && !user?.email) return;
+    try {
+      const sessions = await fetchUserSessions({
+        userId: user?.id,
+        userEmail: user?.email,
+      });
+      const mapped: Chat[] = sessions.map((s) => ({
+        id: s.id,
+        title: s.title,
+        module: s.module || "",
+        createdAt: new Date(s.createdAt),
+      }));
+      // Merge fetched sessions with existing state to preserve temp chats and any loaded messages
+      setChats((prev) => {
+        const tempChats = prev.filter((c) => c.id.startsWith("temp-"));
+        const mergedPersisted = mapped.map((s) => {
+          const prevChat = prev.find((c) => c.id === s.id);
+          return prevChat && prevChat.messages
+            ? { ...s, messages: prevChat.messages }
+            : s;
+        });
+        return [...tempChats, ...mergedPersisted];
+      });
+      // Only auto-select a chat if none is selected and we aren't on the quiz route
+      if (
+        mapped.length > 0 &&
+        !selectedChatId &&
+        !pathname?.startsWith("/quiz")
+      ) {
+        setSelectedChatId(mapped[0].id);
+      }
+    } catch {}
+  };
+
+  // Refresh chat list (to be called after sending messages)
+  const refreshChatList = async () => {
+    await loadSessions();
+  };
+
   useEffect(() => {
-    const loadSessions = async () => {
-      if (!user?.id && !user?.email) return;
-      try {
-        const sessions = await fetchUserSessions({
-          userId: user?.id,
-          userEmail: user?.email,
-        });
-        const mapped: Chat[] = sessions.map((s) => ({
-          id: s.id,
-          title: s.title,
-          module: s.module || "",
-          createdAt: new Date(s.createdAt),
-        }));
-        // Merge fetched sessions with existing state to preserve temp chats and any loaded messages
-        setChats((prev) => {
-          const tempChats = prev.filter((c) => c.id.startsWith("temp-"));
-          const mergedPersisted = mapped.map((s) => {
-            const prevChat = prev.find((c) => c.id === s.id);
-            return prevChat && prevChat.messages
-              ? { ...s, messages: prevChat.messages }
-              : s;
-          });
-          return [...tempChats, ...mergedPersisted];
-        });
-        // Only auto-select a chat if none is selected and we aren't on the quiz route
-        if (
-          mapped.length > 0 &&
-          !selectedChatId &&
-          !pathname?.startsWith("/quiz")
-        ) {
-          setSelectedChatId(mapped[0].id);
-        }
-      } catch {}
-    };
     loadSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.email, pathname]);
@@ -187,6 +194,7 @@ export default function ChatGroupLayout({
     selectedChat,
     isLoadingHistory,
     handleUpdateChat,
+    refreshChatList,
   };
 
   return (

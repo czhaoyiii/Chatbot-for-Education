@@ -12,6 +12,7 @@ interface ChatInterfaceProps {
   selectedChat: Chat | null;
   onUpdateChat: (chatId: string, messages: Message[]) => void;
   isLoadingHistory?: boolean;
+  refreshChatList?: () => Promise<void>;
 }
 
 export default function ChatInterface({
@@ -19,6 +20,7 @@ export default function ChatInterface({
   selectedChat,
   onUpdateChat,
   isLoadingHistory = false,
+  refreshChatList,
 }: ChatInterfaceProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -69,14 +71,28 @@ export default function ChatInterface({
     setIsThinking(true);
 
     try {
-      // Call your backend API
-      const startTime = Date.now();
-      const result = await sendChatMessage(content, {
+      // Start the API call and refresh chat list to show immediate feedback
+      const apiCallPromise = sendChatMessage(content, {
         userId: user?.id,
         userEmail: user?.email,
         courseCode: selectedChat.module,
         sessionId: sessionId || undefined,
       });
+
+      // Refresh chat list after a small delay to allow backend to process the user message
+      if (refreshChatList) {
+        setTimeout(async () => {
+          try {
+            await refreshChatList();
+          } catch (error) {
+            console.warn("Failed to refresh chat list:", error);
+          }
+        }, 500);
+      }
+
+      // Wait for the full API response
+      const startTime = Date.now();
+      const result = await apiCallPromise;
       const endTime = Date.now();
       const thinkingTime = Math.ceil((endTime - startTime) / 1000);
 
