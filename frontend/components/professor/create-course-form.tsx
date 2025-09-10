@@ -306,7 +306,7 @@ export default function CreateCourseForm({
                     onChange={(e) =>
                       handleInputChange("code", e.target.value.toUpperCase())
                     }
-                    placeholder="e.g., CZ4055"
+                    placeholder="e.g., SC2006"
                     className={`w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.code ? "border-red-500" : "border-border"
                     }`}
@@ -330,7 +330,7 @@ export default function CreateCourseForm({
                     type="text"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
-                    placeholder="e.g., Cyber Physical System Security"
+                    placeholder="e.g., Software Engineering"
                     className={`w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.name ? "border-red-500" : "border-border"
                     }`}

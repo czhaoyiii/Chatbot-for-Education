@@ -13,6 +13,7 @@ interface ChatInterfaceProps {
   onUpdateChat: (chatId: string, messages: Message[]) => void;
   isLoadingHistory?: boolean;
   refreshChatList?: () => Promise<void>;
+  moveToTop?: (chatId: string) => void;
 }
 
 export default function ChatInterface({
@@ -21,6 +22,7 @@ export default function ChatInterface({
   onUpdateChat,
   isLoadingHistory = false,
   refreshChatList,
+  moveToTop,
 }: ChatInterfaceProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -79,15 +81,23 @@ export default function ChatInterface({
         sessionId: sessionId || undefined,
       });
 
-      // Refresh chat list after a small delay to allow backend to process the user message
-      if (refreshChatList) {
-        setTimeout(async () => {
-          try {
-            await refreshChatList();
-          } catch (error) {
-            console.warn("Failed to refresh chat list:", error);
-          }
-        }, 500);
+      // For new sessions (temp chats), refresh the entire list
+      // For existing sessions, just move to top immediately for better UX
+      if (!sessionId || selectedChat.id.startsWith("temp-")) {
+        if (refreshChatList) {
+          setTimeout(async () => {
+            try {
+              await refreshChatList();
+            } catch (error) {
+              console.warn("Failed to refresh chat list:", error);
+            }
+          }, 500);
+        }
+      } else if (moveToTop) {
+        // For existing sessions, immediately move to top
+        setTimeout(() => {
+          moveToTop(selectedChat.id);
+        }, 100);
       }
 
       // Wait for the full API response
@@ -104,7 +114,12 @@ export default function ChatInterface({
           setSessionId(result.session_id);
           // Replace temp chat ID with persisted session ID in parent state
           onUpdateChat(result.session_id, updatedMessages);
-          // Note: caller must ensure replacing the chat item ID in the list; we handle messages update here
+          // Move the newly created session to the top
+          if (moveToTop && result.session_id) {
+            setTimeout(() => {
+              moveToTop(result.session_id!);
+            }, 100);
+          }
         }
         // Add AI response
         const aiMessage: Message = {

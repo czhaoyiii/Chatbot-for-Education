@@ -10,6 +10,7 @@ export default function ChatPage() {
     handleUpdateChat,
     isLoadingHistory,
     refreshChatList,
+    moveToTop,
   } = useChatLayout();
 
   return (
@@ -19,6 +20,7 @@ export default function ChatPage() {
       onUpdateChat={handleUpdateChat}
       isLoadingHistory={isLoadingHistory}
       refreshChatList={refreshChatList}
+      moveToTop={moveToTop}
     />
   );
 }

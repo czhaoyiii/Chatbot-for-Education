@@ -23,6 +23,7 @@ type ChatLayoutContextType = {
   isLoadingHistory: boolean;
   handleUpdateChat: (chatId: string, messages: Message[]) => void;
   refreshChatList: () => Promise<void>;
+  moveToTop: (chatId: string) => void;
 };
 
 const ChatLayoutContext = createContext<ChatLayoutContextType | undefined>(
@@ -72,13 +73,49 @@ export default function ChatGroupLayout({
       // Merge fetched sessions with existing state to preserve temp chats and any loaded messages
       setChats((prev) => {
         const tempChats = prev.filter((c) => c.id.startsWith("temp-"));
-        const mergedPersisted = mapped.map((s) => {
-          const prevChat = prev.find((c) => c.id === s.id);
-          return prevChat && prevChat.messages
-            ? { ...s, messages: prevChat.messages }
-            : s;
+
+        // Create a map of existing chats for quick lookup by both ID and title
+        const existingChatsMap = new Map(prev.map((c) => [c.id, c]));
+        const existingTitlesMap = new Map(prev.map((c) => [c.title, c]));
+
+        // Filter out server sessions that already exist locally (by ID or title)
+        const newServerSessions = mapped.filter((serverSession) => {
+          const existsByID = existingChatsMap.has(serverSession.id);
+          const existsByTitle = existingTitlesMap.has(serverSession.title);
+          return !existsByID && !existsByTitle;
         });
-        return [...tempChats, ...mergedPersisted];
+
+        // Merge new server sessions with existing local state, preserving messages
+        const mergedPersisted = prev
+          .filter((c) => !c.id.startsWith("temp-"))
+          .map((existingChat) => {
+            const serverSession = mapped.find((s) => s.id === existingChat.id);
+            return serverSession && existingChat.messages
+              ? { ...serverSession, messages: existingChat.messages }
+              : existingChat;
+          });
+
+        // Add any completely new server sessions
+        const finalResult = [
+          ...tempChats,
+          ...mergedPersisted,
+          ...newServerSessions,
+        ];
+
+        // Debug: Check for duplicates by title
+        const titles = finalResult.map((c) => c.title);
+        const duplicateTitles = titles.filter(
+          (title, index) => titles.indexOf(title) !== index
+        );
+        if (duplicateTitles.length > 0) {
+          console.warn("Duplicate chat titles detected:", duplicateTitles);
+          console.warn(
+            "All chats:",
+            finalResult.map((c) => ({ id: c.id, title: c.title }))
+          );
+        }
+
+        return finalResult;
       });
       // Only auto-select a chat if none is selected and we aren't on the quiz route
       if (
@@ -94,6 +131,17 @@ export default function ChatGroupLayout({
   // Refresh chat list (to be called after sending messages)
   const refreshChatList = async () => {
     await loadSessions();
+  };
+
+  // Move a specific chat to the top (for existing sessions after sending messages)
+  const moveToTop = (chatId: string) => {
+    setChats((prev) => {
+      const chatToMove = prev.find((c) => c.id === chatId);
+      if (!chatToMove) return prev;
+
+      const otherChats = prev.filter((c) => c.id !== chatId);
+      return [chatToMove, ...otherChats];
+    });
   };
 
   useEffect(() => {
@@ -195,6 +243,7 @@ export default function ChatGroupLayout({
     isLoadingHistory,
     handleUpdateChat,
     refreshChatList,
+    moveToTop,
   };
 
   return (
