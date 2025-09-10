@@ -171,7 +171,7 @@ Generate 20 simple questions and 20 scenario-based questions. Return as JSON wit
         for attempt in range(max_retries):
             try:
                 response = await openai_client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt}
@@ -324,7 +324,7 @@ Generate {additional_needed} additional questions covering different aspects of 
 
     try:
         response = await openai_client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -411,7 +411,7 @@ async def _generate_quiz_multiple_chunks(filename: str, content_chunks: List[str
     
     # First, generate topic title from the first chunk
     topic_response = await openai_client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5",
         messages=[
             {
                 "role": "system", 
@@ -504,7 +504,7 @@ Requirements:
 
     try:
         response = await openai_client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": content}

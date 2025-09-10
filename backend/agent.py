@@ -23,7 +23,7 @@ from openai import AsyncOpenAI
 load_dotenv()
 
 # Initialize LLM
-llm = os.getenv("LLM_MODEL", "gpt-4o-mini")
+llm = "gpt-4.1"
 model = OpenAIModel(llm)
 
 # Step 1: Define the dependencies
@@ -159,6 +159,8 @@ def get_cpss_agent(course_title: Optional[str], course_code: Optional[str]) -> A
                     "filter": filter_payload,
                 },
             ).execute()
+
+            print(result)
 
             if not result.data:
                 return "No relevant documentation found."
