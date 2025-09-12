@@ -177,8 +177,7 @@ Generate 20 simple questions and 20 scenario-based questions. Return as JSON wit
                         {"role": "user", "content": user_prompt}
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.7,
-                    max_tokens=16000
+                    max_completion_tokens=16000
                 )
                 
                 response_content = response.choices[0].message.content
@@ -330,8 +329,7 @@ Generate {additional_needed} additional questions covering different aspects of 
                 {"role": "user", "content": user_prompt}
             ],
             response_format={"type": "json_object"},
-            temperature=0.8,  # Slightly higher temperature for more variety
-            max_tokens=8000
+            max_completion_tokens=8000
         )
         
         response_content = response.choices[0].message.content
@@ -422,8 +420,7 @@ async def _generate_quiz_multiple_chunks(filename: str, content_chunks: List[str
                 "content": f"Filename: {filename}\n\nContent preview:\n{content_chunks[0][:2000]}..."
             }
         ],
-        temperature=0.7,
-        max_tokens=100
+        max_completion_tokens=100
     )
     
     topic_title = topic_response.choices[0].message.content.strip()
@@ -510,8 +507,7 @@ Requirements:
                 {"role": "user", "content": content}
             ],
             response_format={"type": "json_object"},
-            temperature=0.7,
-            max_tokens=8000
+            max_completion_tokens=8000
         )
         
         response_content = response.choices[0].message.content

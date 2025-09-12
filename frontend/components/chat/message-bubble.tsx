@@ -61,14 +61,15 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   return (
     <div className="mb-6 group">
       <div className="max-w-[80%]">
-        {message.thinkingTime && (
-          <div className="flex items-center space-x-2 mb-3">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span className="text-xs text-muted-foreground">
-              Thought for {message.thinkingTime} seconds
-            </span>
-          </div>
-        )}
+        {message.thinkingTime !== undefined &&
+          message.thinkingTime !== null && (
+            <div className="flex items-center space-x-2 mb-3">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-xs text-muted-foreground">
+                Thought for {message.thinkingTime} seconds
+              </span>
+            </div>
+          )}
 
         {/* Render markdown content with react-markdown */}
         <div className="text-sm leading-relaxed text-foreground mb-3 break-words overflow-wrap-anywhere prose prose-sm max-w-none dark:prose-invert">

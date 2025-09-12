@@ -171,6 +171,44 @@ async def chat_send(payload: ChatSendRequest):
                 course_code = course_code or cres_meta.data[0]["code"]
                 course_name = course_name or cres_meta.data[0]["name"]
 
+        # Get recent chat history for context (limit to prevent overloading)
+        chat_history = ""
+        try:
+            # Get last 10 messages (5 user + 5 AI pairs) to provide context without overloading
+            history_result = (
+                supabase_client.table("chat_messages")
+                .select("content, sender, created_at")
+                .eq("session_id", session_id)
+                .order("created_at", desc=True)
+                .limit(10)
+                .execute()
+            )
+            
+            if history_result.data and len(history_result.data) > 1:  # More than just the current message
+                # Reverse to get chronological order (oldest first)
+                history_messages = list(reversed(history_result.data[1:]))  # Exclude the just-stored user message
+                
+                # Format chat history for context
+                history_lines = []
+                for msg in history_messages:
+                    sender_label = "User" if msg["sender"] == "user" else "Assistant"
+                    history_lines.append(f"{sender_label}: {msg['content']}")
+                
+                if history_lines:
+                    chat_history = "\n".join(history_lines)
+        except Exception as e:
+            print(f"Warning: Could not retrieve chat history: {e}")
+            # Continue without history if retrieval fails
+
+        # Prepare the message with context
+        if chat_history:
+            contextualized_message = f"""Previous conversation context:
+{chat_history}
+
+Current question: {payload.message}"""
+        else:
+            contextualized_message = payload.message
+
         # Get AI response
         start = datetime.utcnow()
         deps = CPSSChatDeps(
@@ -181,7 +219,7 @@ async def chat_send(payload: ChatSendRequest):
         )
         # Build a course-specific agent prompt
         agent = get_cpss_agent(course_name, course_code)
-        ai_output = await agent.run(payload.message, deps=deps)
+        ai_output = await agent.run(contextualized_message, deps=deps)
         end = datetime.utcnow()
         thinking_time = int((end - start).total_seconds())
         ai_text = ai_output.output if hasattr(ai_output, "output") else str(ai_output)

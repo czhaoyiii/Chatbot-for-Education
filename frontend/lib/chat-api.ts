@@ -92,7 +92,8 @@ export async function fetchSessionMessages(
     id: m.id,
     content: m.content,
     sender: m.sender,
-    thinkingTime: m.thinking_time ?? undefined,
+    thinkingTime:
+      typeof m.thinking_time === "number" ? m.thinking_time : undefined,
     createdAt: m.created_at,
   }));
 }
