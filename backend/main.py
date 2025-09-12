@@ -9,7 +9,6 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from ingestion import files_upload
-from course_creation import create_course
 from course_management import upload_course_files, delete_course_file, delete_course
 from agent import cpss_chat_expert, CPSSChatDeps
 from supabase.client import create_client
@@ -297,6 +296,16 @@ async def upload_course_files_route(
         files_count = total_files.count if total_files.count else 0
         supabase_client.table("courses").update({"files_count": files_count}).eq("id", course_id).execute()
 
+        # Get updated course data including quizzes count
+        updated_course_res = (
+            supabase_client.table("courses")
+            .select("id, code, name, created_by, files_count, quizzes_count, created_at")
+            .eq("id", course_id)
+            .execute()
+        )
+        
+        course_data = updated_course_res.data[0] if updated_course_res.data else {"id": course_id}
+
         # Clean up temp directory
         shutil.rmtree(temp_dir)
         temp_dir = None
@@ -304,7 +313,7 @@ async def upload_course_files_route(
         return {
             "success": True,
             "message": f"Successfully uploaded and processed {len(uploaded_files)} file(s)",
-            "course": {"id": course_id},
+            "course": course_data,
             "files": uploaded_files,
             "ingestion_result": ingestion_result
         }
