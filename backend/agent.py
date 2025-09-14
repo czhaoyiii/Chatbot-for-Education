@@ -8,7 +8,7 @@ from typing import List, Optional
 
 # Import PydanticAI (Agent creation)
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel
 
 # Import Gemini (Embedding)
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -24,7 +24,7 @@ load_dotenv()
 
 # Initialize LLM
 llm = "gpt-4.1"
-model = OpenAIModel(llm)
+model = OpenAIChatModel(llm)
 
 # Step 1: Define the dependencies
 @dataclass

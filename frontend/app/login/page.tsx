@@ -35,11 +35,10 @@ export default function LoginPage() {
 
   const isValidNTUEmail = (email: string) => {
     const lower = email.trim().toLowerCase();
-    const ntu =
-      lower.endsWith("@e.ntu.edu.sg") && lower.length > "@e.ntu.edu.sg".length;
-    const gmail =
-      lower.endsWith("@gmail.com") && lower.length > "@gmail.com".length;
-    return ntu || gmail;
+    const ntustudent = lower.endsWith("@e.ntu.edu.sg") && lower.length > "@e.ntu.edu.sg".length;
+    const ntuprof = lower.endsWith("@ntu.edu.sg") && lower.length > "@ntu.edu.sg".length;
+    const gmail = lower.endsWith("@gmail.com") && lower.length > "@gmail.com".length;
+    return ntustudent || ntuprof || gmail;
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -279,7 +278,7 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email (NTU or gmail.com)"
+                    placeholder="Enter your NTU email"
                     className="bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>

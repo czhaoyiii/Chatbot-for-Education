@@ -302,7 +302,7 @@ export default function QuizInterface({
       <div className="flex-1 flex flex-col relative overflow-hidden">
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
           <div className="min-h-full flex items-center justify-center p-4 py-8">
-            <div className="text-center max-w-2xl px-4 animate-fade-in">
+            <div className="text-center max-w-xl px-4 animate-fade-in">
               <div className="mb-6">
                 <Image
                   src="/logo.png"
@@ -328,12 +328,14 @@ export default function QuizInterface({
                     if (!courseDropdownOpen) setTopicDropdownOpen(false); // Close topic dropdown when opening course dropdown
                   }}
                 >
-                  {selectedCourseId
-                    ? `${getSelectedCourseInfo()?.code} - ${
-                        getSelectedCourseInfo()?.name
-                      }`
-                    : "Choose a course..."}
-                  <ChevronDown className="w-5 h-5 ml-2" />
+                  <span className="truncate pr-2">
+                    {selectedCourseId
+                      ? `${getSelectedCourseInfo()?.code} - ${
+                          getSelectedCourseInfo()?.name
+                        }`
+                      : "Choose a course..."}
+                  </span>
+                  <ChevronDown className="w-5 h-5 ml-2 flex-shrink-0" />
                 </Button>
 
                 {courseDropdownOpen && (
@@ -383,8 +385,10 @@ export default function QuizInterface({
                       if (!topicDropdownOpen) setCourseDropdownOpen(false); // Close course dropdown when opening topic dropdown
                     }}
                   >
-                    {selectedTopic || "Choose a topic..."}
-                    <ChevronDown className="w-5 h-5 ml-2" />
+                    <span className="truncate pr-2">
+                      {selectedTopic || "Choose a topic..."}
+                    </span>
+                    <ChevronDown className="w-5 h-5 ml-2 flex-shrink-0" />
                   </Button>
 
                   {topicDropdownOpen && (
