@@ -1,0 +1,7 @@
+fastapi[standard]
+docling
+langchain[google-genai]
+supabase
+pydantic-ai
+rapidocr
+onnxruntime
