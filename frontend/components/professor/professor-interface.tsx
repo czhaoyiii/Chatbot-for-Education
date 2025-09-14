@@ -181,8 +181,7 @@ export default function ProfessorInterface() {
                     Your Courses ({courses.length})
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Click on any course to manage files, create quizzes, and
-                    view student activity
+                    Click on any course to manage courses, upload/delete files, and create quizzes.
                   </p>
                 </div>
                 <div className="flex items-center space-x-3">

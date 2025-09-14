@@ -1,4 +1,4 @@
-import { ArrowUp, Plus } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { Button } from "../ui/button";
 import { useEffect, useRef, useState } from "react";
 import type { Chat } from "@/types/chat";
@@ -116,20 +116,7 @@ export default function ChatInput({
             </div>
 
             {/* Icons row below textarea */}
-            <div className="flex items-center justify-between">
-              {/* Left side */}
-              <div className="flex items-center space-x-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={isDisabled}
-                  className="text-muted-foreground hover:text-foreground rounded-full hover:bg-accent transition-all duration-200 h-8 w-8 p-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-
+            <div className="flex items-center justify-end">
               {/* Right side */}
               <div className="flex items-center space-x-2">
                 <Button
