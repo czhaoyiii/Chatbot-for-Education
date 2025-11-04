@@ -45,7 +45,7 @@ converter = DocumentConverter(
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=690, chunk_overlap=100)
 
 # Initialize Gemini embedding model
-embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-exp-03-07")
+embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
 def files_upload(
     documents_dir: Union[str, Path],

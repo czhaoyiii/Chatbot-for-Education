@@ -171,13 +171,14 @@ Generate 20 simple questions and 20 scenario-based questions. Return as JSON wit
         for attempt in range(max_retries):
             try:
                 response = await openai_client.chat.completions.create(
-                    model="gpt-5",
+                    model="gpt-4.1",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt}
                     ],
                     response_format={"type": "json_object"},
-                    max_completion_tokens=16000
+                    temperature=0.7,
+                    max_tokens=16000
                 )
                 
                 response_content = response.choices[0].message.content
@@ -323,13 +324,14 @@ Generate {additional_needed} additional questions covering different aspects of 
 
     try:
         response = await openai_client.chat.completions.create(
-            model="gpt-5",
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
             response_format={"type": "json_object"},
-            max_completion_tokens=8000
+            temperature=1,
+            max_tokens=8000
         )
         
         response_content = response.choices[0].message.content
@@ -409,7 +411,7 @@ async def _generate_quiz_multiple_chunks(filename: str, content_chunks: List[str
     
     # First, generate topic title from the first chunk
     topic_response = await openai_client.chat.completions.create(
-        model="gpt-5",
+        model="gpt-4.1",
         messages=[
             {
                 "role": "system", 
@@ -420,7 +422,8 @@ async def _generate_quiz_multiple_chunks(filename: str, content_chunks: List[str
                 "content": f"Filename: {filename}\n\nContent preview:\n{content_chunks[0][:2000]}..."
             }
         ],
-        max_completion_tokens=100
+        temperature=0.7,
+        max_tokens=100
     )
     
     topic_title = topic_response.choices[0].message.content.strip()
@@ -501,13 +504,14 @@ Requirements:
 
     try:
         response = await openai_client.chat.completions.create(
-            model="gpt-5",
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": content}
             ],
             response_format={"type": "json_object"},
-            max_completion_tokens=8000
+            temperature=1,
+            max_tokens=8000
         )
         
         response_content = response.choices[0].message.content

@@ -72,7 +72,7 @@ cpss_chat_expert = Agent(
 
 async def get_embedding(text: str) -> List[float]:
     try:
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-exp-03-07")
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
         embedding = embeddings.embed_query(text)
         return embedding
     except Exception as e:
