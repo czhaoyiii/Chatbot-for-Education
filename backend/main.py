@@ -24,9 +24,15 @@ from quiz_generation import get_course_quizzes
 
 app = FastAPI()
 
+# Allow CORS from both localhost and Vercel deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",  # Local development
+        "https://educhat-fyp.vercel.app/",     # Vercel preview deployments
+        "*"                         # Allow all origins (or specify your Vercel domain)
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

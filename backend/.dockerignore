@@ -1,0 +1,79 @@
+# Ignore unnecessary files to speed up Docker builds# files to be ignored
+
+__pycache__/__pycache__
+
+*.pyc*.pyc
+
+*.pyo*.pyo
+
+*.pyd*.pyd
+
+.Python.Python
+
+*.sopip-log.txt
+
+*.eggpip-delete-this-directory.txt
+
+*.egg-info/.tox
+
+dist/.coverage
+
+build/.coverage.*
+
+.env.cache
+
+.env.localnosetests.xml
+
+.venv/coverage.xml
+
+venv/*.cover
+
+ENV/*.log
+
+.git
+
+# Git.mypy_cache
+
+.git/.pytest_cache
+
+.gitignore.hypothesis
+
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+test/
+*.test
+*.spec
+
+# Documentation
+*.md
+README.md
+LICENSE
+
+# Local data
+documents/
+output_result/
+*.pdf
+*.jpg
+*.png
+
+# AWS/Cloud files (we're using Google Cloud)
+aws-*.sh
+AWS-*.md
+task-definition.json
+ecs-*.json
+
+# Backup files
+requirements_backup.txt
+*_backup.*
+*.bak
